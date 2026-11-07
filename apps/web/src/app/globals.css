@@ -1,0 +1,196 @@
+/* TMP design system. One idea: a school exercise book. Cool paper, ink, and the red margin line. */
+:root {
+  --ink: #16213a;
+  --ink-soft: #46506b;
+  --paper: #f5f7fa;
+  --surface: #ffffff;
+  --rule: #d3dae6;
+  --pen: #c62f2f;
+  --pen-wash: #fbeaea;
+  --ok: #1b6e45;
+  --ok-wash: #e4f3ea;
+  --wait: #8a5a00;
+  --wait-wash: #fbf0d9;
+  --focus: #2447c4;
+
+  --font-display: "Bricolage Grotesque Variable", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.25rem;
+  --step-2: 1.625rem;
+  --step-3: 2.25rem;
+
+  --radius: 6px;
+  --gutter: clamp(1rem, 4vw, 2.5rem);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html {
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.55;
+}
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0;
+  text-wrap: balance;
+}
+h1 { font-size: var(--step-3); }
+h2 { font-size: var(--step-1); }
+p { margin: 0; max-width: 62ch; }
+a { color: var(--ink); text-underline-offset: 3px; }
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+.sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+.skip-link {
+  position: absolute; left: 0.5rem; top: -4rem; background: var(--ink); color: #fff; padding: 0.6rem 1rem; z-index: 50;
+}
+.skip-link:focus { top: 0.5rem; }
+
+/* ---------- app shell ---------- */
+.shell { min-height: 100dvh; display: grid; grid-template-columns: 15rem 1fr; }
+.sidebar {
+  background: var(--ink); color: #e8ecf6; padding: 1.25rem 1rem; display: flex; flex-direction: column; gap: 1.5rem;
+  position: sticky; top: 0; height: 100dvh;
+}
+.brand { font-family: var(--font-display); font-size: var(--step-1); font-weight: 700; color: #fff; text-decoration: none; line-height: 1.1; }
+.brand small { display: block; font-family: var(--font-body); font-weight: 400; font-size: var(--step--1); color: #b6bfd6; margin-top: 0.2rem; }
+.nav { display: flex; flex-direction: column; gap: 0.15rem; }
+.nav a {
+  color: #e8ecf6; text-decoration: none; padding: 0.6rem 0.75rem; border-radius: var(--radius); min-height: 44px; display: flex; align-items: center;
+}
+.nav a:hover { background: rgba(255, 255, 255, 0.08); }
+.nav a[aria-current="page"] { background: #fff; color: var(--ink); font-weight: 700; }
+.nav a:focus-visible { outline-color: #fff; }
+.who { margin-top: auto; font-size: var(--step--1); color: #b6bfd6; display: grid; gap: 0.5rem; }
+.who strong { color: #fff; font-weight: 700; display: block; overflow-wrap: anywhere; }
+
+/* The signature: a red margin line down the content column, like an exercise book. */
+.main { position: relative; padding: clamp(1.25rem, 3vw, 2.25rem) var(--gutter) 4rem calc(var(--gutter) + 1.25rem); min-width: 0; }
+.main::before {
+  content: ""; position: absolute; top: 0; bottom: 0; left: var(--gutter); width: 2px; background: var(--pen); opacity: 0.85;
+}
+.page { max-width: 62rem; display: grid; gap: 2rem; }
+.page-head { display: grid; gap: 0.4rem; }
+.page-head p { color: var(--ink-soft); }
+
+.topbar { display: none; }
+
+@media (max-width: 52rem) {
+  .shell { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; background: var(--ink); color: #fff; padding: 0.6rem var(--gutter);
+    position: sticky; top: 0; z-index: 20;
+  }
+  .topbar .brand { font-size: var(--step-0); }
+  .topbar details { position: relative; }
+  .topbar summary {
+    list-style: none; cursor: pointer; padding: 0.6rem 0.9rem; border: 1px solid rgba(255, 255, 255, 0.35); border-radius: var(--radius); min-height: 44px; display: flex; align-items: center;
+  }
+  .topbar summary::-webkit-details-marker { display: none; }
+  .topbar .menu {
+    position: absolute; right: 0; top: calc(100% + 0.4rem); width: min(18rem, 86vw); background: var(--ink); border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius); padding: 0.5rem; display: grid; gap: 0.5rem;
+  }
+}
+
+/* ---------- leader rows: marks on an exam paper, not a grid of cards ---------- */
+.leaders { list-style: none; margin: 0; padding: 0; max-width: 40rem; }
+.leaders li { display: flex; align-items: baseline; gap: 0.5rem; padding: 0.55rem 0; }
+.leaders .dots { flex: 1; border-bottom: 2px dotted var(--rule); transform: translateY(-0.3em); min-width: 1rem; }
+.leaders .value { font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); font-variant-numeric: tabular-nums; line-height: 1; }
+.asof { color: var(--ink-soft); font-size: var(--step--1); margin-top: -1rem; max-width: none; }
+
+/* ---------- sections, tables, status ---------- */
+.section { display: grid; gap: 0.9rem; }
+.section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.5rem 1rem; }
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); }
+table { width: 100%; border-collapse: collapse; font-size: var(--step--1); }
+caption { text-align: left; }
+th, td { text-align: left; padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--rule); vertical-align: middle; }
+th { font-weight: 700; background: #eef1f7; white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.actions { white-space: nowrap; display: flex; gap: 0.4rem; justify-content: flex-end; }
+
+.pill { display: inline-block; padding: 0.1rem 0.6rem; border-radius: 99px; font-size: var(--step--1); font-weight: 700; white-space: nowrap; }
+.pill.ok { background: var(--ok-wash); color: var(--ok); }
+.pill.wait { background: var(--wait-wash); color: var(--wait); }
+.pill.bad { background: var(--pen-wash); color: var(--pen); }
+.pill.plain { background: #e8ecf6; color: var(--ink-soft); }
+
+/* ---------- forms ---------- */
+.form { display: grid; gap: 1rem; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); padding: 1.1rem; max-width: 34rem; }
+.field { display: grid; gap: 0.3rem; }
+.field label { font-weight: 700; }
+.field .hint { color: var(--ink-soft); font-size: var(--step--1); }
+input, select {
+  font: inherit; color: inherit; background: var(--surface); border: 1px solid #98a3bb; border-radius: var(--radius); padding: 0.65rem 0.75rem; min-height: 44px; width: 100%;
+}
+input:focus-visible, select:focus-visible { outline-offset: 0; border-color: var(--focus); }
+.btn {
+  font: inherit; font-weight: 700; min-height: 44px; padding: 0.55rem 1.1rem; border-radius: var(--radius); border: 2px solid var(--ink); background: var(--ink); color: #fff; cursor: pointer;
+}
+.btn:hover { background: #24325a; }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn.quiet { background: transparent; color: var(--ink); }
+.btn.quiet:hover { background: #e8ecf6; }
+.btn.danger { background: transparent; color: var(--pen); border-color: var(--pen); }
+.btn.danger:hover { background: var(--pen-wash); }
+.btn.small { min-height: 36px; padding: 0.25rem 0.7rem; font-size: var(--step--1); }
+.btn-row { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: end; }
+.toolbar .field { min-width: 12rem; }
+
+/* ---------- feedback states ---------- */
+.note { padding: 0.8rem 1rem; border-radius: var(--radius); border: 1px solid; max-width: 44rem; }
+.note.error { background: var(--pen-wash); border-color: #e8b4b4; color: #7d1717; }
+.note.good { background: var(--ok-wash); border-color: #b5dbc4; color: #11492d; }
+.empty { border: 2px dashed var(--rule); border-radius: var(--radius); padding: 1.4rem; display: grid; gap: 0.4rem; max-width: 40rem; background: var(--surface); }
+.empty strong { font-family: var(--font-display); font-size: var(--step-1); }
+.skeleton { background: linear-gradient(90deg, #e6eaf2, #f1f4f9, #e6eaf2); background-size: 200% 100%; height: 1.2rem; border-radius: 4px; animation: shimmer 1.4s linear infinite; max-width: 30rem; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* ---------- sign-in ---------- */
+.signin { min-height: 100dvh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.signin-side { background: var(--ink); color: #fff; padding: clamp(1.5rem, 5vw, 4rem); display: flex; flex-direction: column; justify-content: space-between; gap: 2rem; }
+.signin-side h1 { font-size: clamp(2rem, 5vw, 3.4rem); max-width: 14ch; }
+.signin-side p { color: #b6bfd6; }
+.signin-side .brand { font-size: var(--step-1); }
+.signin-form { position: relative; padding: clamp(1.5rem, 5vw, 4rem) clamp(1.5rem, 5vw, 4rem) clamp(1.5rem, 5vw, 4rem) clamp(2.5rem, 6vw, 5rem); display: grid; align-content: center; gap: 1.5rem; }
+.signin-form::before { content: ""; position: absolute; top: 0; bottom: 0; left: clamp(1.25rem, 3vw, 2.5rem); width: 2px; background: var(--pen); opacity: 0.85; }
+.signin-form form { display: grid; gap: 1.1rem; max-width: 26rem; }
+@media (max-width: 52rem) {
+  .signin { grid-template-columns: 1fr; }
+  .signin-side { gap: 1rem; padding-bottom: 1.5rem; }
+  .signin-side h1 { max-width: none; font-size: var(--step-2); }
+}
+
+.pre { white-space: pre-wrap; font-size: 0.8rem; max-width: 26rem; overflow-wrap: anywhere; color: var(--ink-soft); }
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+}

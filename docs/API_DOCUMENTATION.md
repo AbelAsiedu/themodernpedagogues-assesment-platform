@@ -1,0 +1,44 @@
+# API documentation
+
+Base path `/api/v1`. JSON in/out. Authenticated by the `tmp_session` cookie.
+Cookie-authenticated **mutations** must send an allowed `Origin` (browsers do this automatically) or `x-tmp-client: web`.
+
+Errors: `{ "error": { "code", "message", "details?" } }`. Validation failures are 400 with `details: [{ path, message }]`.
+Status codes: 401 not signed in · 403 not allowed · 404 not found (platform staff only, see AUTHENTICATION_AND_PERMISSIONS.md) ·
+409 conflict · 429 too many attempts / rate limited.
+
+"Scope" = the permission is checked inside the named institution. "Platform" = needs a platform role or delegation.
+
+| Method & path | Requires | Notes |
+|---|---|---|
+| GET `/health`, `/health/ready` (no prefix) | — | ready checks the database |
+| POST `/auth/login` | — | `{email,password}`; sets cookie; lockout after 5 failures/15 min |
+| POST `/auth/logout` | session | revokes the session |
+| GET `/auth/me` | session | user, roles, platform permissions, active institutions |
+| GET `/users` | users.read (platform) | `q`, `role`, `status`, `limit≤100`, `offset` |
+| POST `/users` | users.create (platform) | platform role in body additionally needs users.assign_roles |
+| PATCH `/users/:id/status` | users.suspend (platform) | revokes sessions when not active; not on self; platform accounts: super admin only |
+| PATCH `/users/:id/platform-role` | users.assign_roles | super admin only; revokes the target's sessions |
+| POST `/users/:id/permissions` | users.assign_roles | `{permission}`; super-admin-only permissions refused |
+| DELETE `/users/:id/permissions/:permission` | users.assign_roles | |
+| GET `/institutions` | session | all for platform readers, otherwise your own |
+| POST `/institutions` | institutions.create (platform) | created as `pending` |
+| GET `/institutions/:id` | institutions.read (scope) | |
+| PATCH `/institutions/:id/status` | institutions.update to activate, institutions.suspend to suspend (platform) | |
+| GET `/institutions/:id/members` | members.read (scope) | |
+| POST `/institutions/:id/users` | members.manage (scope) | creates user + membership in one transaction; institution must be active; admins only by platform staff |
+| POST `/institutions/:id/members` | members.manage (scope) **and** platform users.read | attach an existing user |
+| PATCH `/institutions/:id/members/:membershipId/status` | members.manage (scope) | filtered by both ids; not on self |
+| GET `/institutions/:id/overview` | members.read (scope) | live counts |
+| GET `/institutions/:id/classes` | classes.read (scope) | managers see all; students only their own |
+| POST `/institutions/:id/classes` | classes.manage (scope) | |
+| GET `/classes/:id` | classes.read (its institution) | students only if a member |
+| GET `/classes/:id/members` | classes.manage (its institution) | |
+| POST `/classes/:id/members` | classes.manage (its institution) | user must be an active member of that institution |
+| POST `/classes/:id/archive` | classes.manage (its institution) | |
+| GET `/admin/overview` | users.read (platform) | real counts only |
+| GET `/audit` | audit.read (platform) | filters: `action` prefix, `outcome`, `actorUserId`; `limit≤200` |
+
+No OpenAPI document is generated yet; this file is maintained by hand.
+
+Rate limits: 300 requests/min/IP globally; 20 logins/15 min/IP (`RATE_LIMIT_MAX`, `LOGIN_RATE_LIMIT_MAX`).
