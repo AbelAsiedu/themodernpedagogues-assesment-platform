@@ -31,6 +31,16 @@ erDiagram
 | ai_generations | one row per AI request (ok or failed): provider, model, prompt version, tokens, latency, counts, error | status CHECK; grounding text is NOT stored, only its length |
 | platform_settings | key/value settings | created, not yet used by any feature |
 
+## Quizzes and live sessions (migration 0003)
+
+| Table | Purpose |
+|---|---|
+| `quizzes`, `quiz_items` | a teacher's quiz; each item pins a `question_version` |
+| `quiz_sessions` | one run of a quiz: `join_code`, status (`lobby`/`active`/`ended`), `settings` jsonb snapshot, optional `class_id`, `ends_at`. Partial unique index `quiz_sessions_open_code_uq` on `join_code` where status ≠ `ended` |
+| `session_questions` | frozen copy of each question (with its answer key) used by that session |
+| `session_participants` | one per student per session; shuffled `question_order`, current index, `question_served_at` (server clock), running totals |
+| `session_answers` | PK `(participant_id, idx)`: one row per answered question; makes retries idempotent |
+
 ## Audit immutability
 
 `drizzle/0001_audit_immutable.sql` installs triggers that raise an error on UPDATE, DELETE and TRUNCATE of

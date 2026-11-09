@@ -22,6 +22,13 @@
       "when": 1794266017865,
       "tag": "0002_questions_and_ai",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794266933405,
+      "tag": "0003_quizzes_and_live_sessions",
+      "breakpoints": true
     }
   ]
 }

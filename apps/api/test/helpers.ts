@@ -3,6 +3,10 @@ import { buildApp } from "../src/app.js";
 import { loadConfig } from "../src/config.js";
 import { createDb } from "../src/db/client.js";
 import { seed } from "../src/db/seed.js";
+import { randomUUID } from "node:crypto";
+import type { Redis } from "ioredis";
+import { memberships, users } from "../src/db/schema.js";
+import { createSession } from "../src/session.js";
 import type { AiProvider } from "../src/ai/provider.js";
 import { TEST_DB_URL } from "./global-setup.js";
 
@@ -17,7 +21,7 @@ export interface TestEnv {
   close(): Promise<void>;
 }
 
-export async function startTestEnv(opts: { ai?: AiProvider; env?: Record<string, string> } = {}): Promise<TestEnv> {
+export async function startTestEnv(opts: { ai?: AiProvider; redis?: Redis; env?: Record<string, string> } = {}): Promise<TestEnv> {
   const config = loadConfig({
     NODE_ENV: "test",
     DATABASE_URL: TEST_DB_URL,
@@ -28,7 +32,7 @@ export async function startTestEnv(opts: { ai?: AiProvider; env?: Record<string,
   } as NodeJS.ProcessEnv);
   const { db, sql } = createDb(TEST_DB_URL, { max: 5 });
   const ids = await seed(db, PASSWORD);
-  const app = await buildApp({ config, db, sql, ai: opts.ai });
+  const app = await buildApp({ config, db, sql, ai: opts.ai, redis: opts.redis });
   await app.ready();
   return {
     app,
@@ -63,4 +67,24 @@ export async function login(app: FastifyInstance, email: string, password = PASS
       headers: { cookie, origin: ORIGIN, ...headers },
     });
   return { call, cookie };
+}
+
+/** A client for an existing user, authenticated by minting a session directly (no password hashing), for bulk tests. */
+export async function clientFor(env: TestEnv, userId: string): Promise<TestClient> {
+  const { token } = await createSession(env.db, userId, 12, {});
+  const cookie = `tmp_session=${token}`;
+  const call = (method: "GET" | "POST" | "PATCH" | "DELETE", url: string, payload?: unknown, headers: Record<string, string> = {}) =>
+    env.app.inject({ method, url: `/api/v1${url}`, payload: payload as object | undefined, headers: { cookie, origin: ORIGIN, ...headers } });
+  return { call, cookie };
+}
+
+/** Create n active students in a school. */
+export async function makeStudents(env: TestEnv, institutionId: string, n: number) {
+  const tag = randomUUID().slice(0, 8);
+  const rows = await env.db
+    .insert(users)
+    .values(Array.from({ length: n }, (_, i) => ({ email: `bulk.${tag}.${i}@tmp.test`, fullName: `Bulk Student${i} Tester`, passwordHash: "not-a-real-hash" })))
+    .returning();
+  await env.db.insert(memberships).values(rows.map((u) => ({ userId: u.id, institutionId, role: "student" })));
+  return Promise.all(rows.map(async (u) => ({ id: u.id, client: await clientFor(env, u.id) })));
 }

@@ -23,7 +23,7 @@ bulk/queued jobs, provider/model management UI, cost reporting. Those remain des
   the model never to follow instructions inside them. Only the text's length is stored. The model has no tools or data access.
 - Copyright: the prompt asks for original questions and forbids reproducing past papers/marking schemes; the UI tells teachers to
   paste only notes they wrote or may use. Third-party papers are not ingested.
-- AI is never in any examination submission path (no exam engine exists yet; the rule stands for Phase 5/6).
+- AI is never in any examination submission path (no exam engine exists yet; the rule stands for Phase 5/6). It is also not used in quiz play, marking or the leaderboard (Phase 4): those are deterministic.
 
 ## Still planned
 - Queued jobs for long work (documents, bulk), status polling; spend caps per institution; admin-managed providers/models.

@@ -228,3 +228,36 @@ label.inline { display: inline-flex; align-items: center; gap: 0.4rem; margin-ri
 .stack { display: grid; gap: 1rem; }
 .stem-cell { max-width: 34rem; overflow-wrap: anywhere; }
 a.rowlink { color: var(--ink); font-weight: 700; }
+
+/* ---------- quizzes, live sessions ---------- */
+.code-display { font-family: var(--font-display); font-weight: 800; font-size: clamp(2.5rem, 9vw, 5rem); letter-spacing: 0.18em; line-height: 1; padding: 0.4rem 1.1rem 0.4rem 1.4rem; background: var(--surface); border: 2px solid var(--ink); border-left: 8px solid var(--pen); border-radius: var(--radius); display: inline-block; user-select: all; }
+.board { list-style: none; margin: 0; padding: 0; max-width: 34rem; counter-reset: none; }
+.board li { display: flex; align-items: baseline; gap: 0.6rem; padding: 0.4rem 0; border-bottom: 1px solid var(--rule); }
+.board .rank { width: 2rem; font-family: var(--font-display); font-weight: 800; font-size: var(--step-1); font-variant-numeric: tabular-nums; }
+.board li:nth-child(-n+3) .rank { color: var(--pen); }
+.board .who-name { font-weight: 700; overflow-wrap: anywhere; }
+.board .dots { flex: 1; border-bottom: 2px dotted var(--rule); min-width: 1rem; transform: translateY(-0.25em); }
+.board .pts { font-family: var(--font-display); font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat-row { display: flex; flex-wrap: wrap; gap: 1.5rem 2.5rem; }
+.stat { display: grid; }
+.stat b { font-family: var(--font-display); font-size: var(--step-3); line-height: 1; font-variant-numeric: tabular-nums; }
+.stat span { color: var(--ink-soft); font-size: var(--step--1); }
+.play { display: grid; gap: 1.2rem; max-width: 40rem; }
+.timer { height: 10px; background: #e1e6f0; border-radius: 99px; overflow: hidden; }
+.timer > i { display: block; height: 100%; background: var(--ink); transition: width 0.25s linear; }
+.timer.low > i { background: var(--pen); }
+.answers { display: grid; gap: 0.7rem; }
+.ans-btn { display: flex; align-items: center; gap: 0.8rem; text-align: left; font: inherit; font-size: var(--step-1); min-height: 3.6rem; padding: 0.7rem 1rem; background: var(--surface); color: var(--ink); border: 2px solid var(--ink); border-radius: var(--radius); cursor: pointer; width: 100%; }
+.ans-btn:hover:not(:disabled) { background: #e8ecf6; }
+.ans-btn:disabled { cursor: default; opacity: 0.6; }
+.ans-btn .letter { font-family: var(--font-display); font-weight: 800; min-width: 1.6rem; }
+.ans-btn.right { background: var(--ok-wash); border-color: var(--ok); opacity: 1; }
+.ans-btn.wrong { background: var(--pen-wash); border-color: var(--pen); opacity: 1; }
+.feedback { border-left: 6px solid var(--ok); background: var(--ok-wash); padding: 0.8rem 1rem; border-radius: var(--radius); display: grid; gap: 0.3rem; }
+.feedback.bad { border-left-color: var(--pen); background: var(--pen-wash); }
+.feedback strong { font-family: var(--font-display); font-size: var(--step-2); }
+.bigbtn { min-height: 3.2rem; font-size: var(--step-1); padding: 0.5rem 1.6rem; }
+.codeinput { font-family: var(--font-display); font-size: 2rem; letter-spacing: 0.25em; text-transform: uppercase; text-align: center; max-width: 16rem; }
+.check-list { display: grid; gap: 0.4rem; max-height: 22rem; overflow: auto; border: 1px solid var(--rule); border-radius: var(--radius); padding: 0.5rem; background: var(--surface); }
+.check-list label { display: flex; gap: 0.6rem; align-items: flex-start; font-weight: 400; min-height: 44px; padding: 0.25rem; }
+.check-list input { width: 1.3rem; height: 1.3rem; accent-color: var(--ink); margin-top: 0.2rem; flex: none; }

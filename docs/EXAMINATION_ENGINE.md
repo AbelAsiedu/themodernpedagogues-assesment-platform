@@ -1,6 +1,6 @@
 # Examination engine — DESIGN INTENT, NOT IMPLEMENTED
 
-Nothing in this file exists in code yet. It records the decisions to build against in Phase 5.
+Nothing in this file exists in code yet. It records the decisions to build against in Phase 5. (The Phase 4 classroom quiz engine is separate and is described in ARCHITECTURE.md; it reuses the server-owned clock idea but not the exam structure or persistence design.)
 
 ## Principles
 1. **The server owns time.** Candidates never decide when an exam ends.

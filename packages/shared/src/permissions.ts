@@ -40,6 +40,10 @@ export const PERMISSIONS = [
   "subjects.manage",
   // AI
   "ai.generate",
+  // quizzes and live sessions
+  "quizzes.manage",
+  "sessions.host",
+  "sessions.play",
   // audit & settings
   "audit.read",
   "settings.read",
@@ -62,12 +66,14 @@ export const INSTITUTION_ROLE_PERMISSIONS: Record<InstitutionRole, readonly Perm
   institution_admin: [
     "members.read", "members.manage", "classes.read", "classes.manage", "institutions.read", "institutions.update",
     "questions.read", "questions.write", "questions.review", "subjects.manage", "ai.generate",
+    "quizzes.manage", "sessions.host",
   ],
   teacher: [
     "members.read", "classes.read", "classes.manage",
     "questions.read", "questions.write", "questions.review", "subjects.manage", "ai.generate",
+    "quizzes.manage", "sessions.host",
   ],
-  student: ["classes.read"],
+  student: ["classes.read", "sessions.play"],
 };
 
 /**

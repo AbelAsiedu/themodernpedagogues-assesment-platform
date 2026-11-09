@@ -18,6 +18,12 @@ import { classRoutes } from "./routes/classes.js";
 import { adminRoutes } from "./routes/admin.js";
 import { questionRoutes } from "./routes/questions.js";
 import { aiRoutes } from "./routes/ai.js";
+import { quizRoutes } from "./routes/quizzes.js";
+import { playRoutes } from "./routes/play.js";
+import { liveRoutes } from "./routes/live.js";
+import websocket from "@fastify/websocket";
+import { Leaderboard } from "./quiz/leaderboard.js";
+import { LiveHub } from "./quiz/hub.js";
 import type { AiProvider } from "./ai/provider.js";
 
 export interface AppDeps {
@@ -36,6 +42,8 @@ declare module "fastify" {
   }
   interface FastifyInstance {
     deps: AppDeps;
+    leaderboard: Leaderboard;
+    hub: LiveHub;
     /** Resolve the signed-in actor or throw 401. */
     requireActor(req: FastifyRequest): Actor;
     /** Throw 403 (and write a denied audit record) unless the actor holds the permission in scope. */
@@ -53,12 +61,22 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     bodyLimit: 1_048_576,
   });
   app.decorate("deps", deps);
+  const leaderboard = new Leaderboard(db, deps.redis);
+  const hub = new LiveHub(db, leaderboard, deps.redis);
+  app.decorate("leaderboard", leaderboard);
+  app.decorate("hub", hub);
+  await hub.start();
+  app.addHook("onClose", async () => { await hub.stop(); });
 
   await app.register(helmet);
   await app.register(cors, { origin: config.webOrigins, credentials: true });
   await app.register(cookie);
+  await app.register(websocket, { options: { maxPayload: 1024 } });
   await app.register(rateLimit, {
     global: true,
+    // Count per signed-in user, not per IP: a whole classroom shares one school IP address, and must not throttle itself.
+    hook: "preHandler",
+    keyGenerator: (req) => req.actor?.id ?? req.ip,
     max: config.RATE_LIMIT_MAX,
     timeWindow: "1 minute",
     ...(deps.redis ? { redis: deps.redis } : {}),
@@ -144,6 +162,9 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       await v1.register(adminRoutes);
       await v1.register(questionRoutes);
       await v1.register(aiRoutes);
+      await v1.register(quizRoutes);
+      await v1.register(playRoutes);
+      await v1.register(liveRoutes);
     },
     { prefix: "/api/v1" },
   );

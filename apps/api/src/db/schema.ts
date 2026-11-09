@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   bigserial,
+  boolean,
   check,
   doublePrecision,
   integer,
@@ -258,6 +259,141 @@ export const questionVersions = pgTable(
   (t) => [primaryKey({ columns: [t.questionId, t.version] })],
 );
 
+
+/* ------------------------------------------------------------ quizzes & live */
+
+export const quizzes = pgTable(
+  "quizzes",
+  {
+    id: id(),
+    institutionId: uuid("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    timePerQuestionSec: integer("time_per_question_sec").notNull().default(30),
+    shuffleQuestions: boolean("shuffle_questions").notNull().default(true),
+    shuffleOptions: boolean("shuffle_options").notNull().default(true),
+    showLeaderboard: boolean("show_leaderboard").notNull().default(true),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("quizzes_institution_idx").on(t.institutionId),
+    check("quizzes_time_ck", sql`${t.timePerQuestionSec} between 5 and 300`),
+  ],
+);
+
+/** A quiz points at a SPECIFIC version of each approved question, so later edits can't change it. */
+export const quizItems = pgTable(
+  "quiz_items",
+  {
+    quizId: uuid("quiz_id").notNull().references(() => quizzes.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    questionId: uuid("question_id").notNull().references(() => questions.id, { onDelete: "restrict" }),
+    questionVersion: integer("question_version").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.quizId, t.position] })],
+);
+
+export interface SessionSettings {
+  title: string;
+  timePerQuestionSec: number;
+  shuffleQuestions: boolean;
+  shuffleOptions: boolean;
+  showLeaderboard: boolean;
+  durationMinutes: number | null;
+}
+
+export const quizSessions = pgTable(
+  "quiz_sessions",
+  {
+    id: id(),
+    institutionId: uuid("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+    quizId: uuid("quiz_id").notNull().references(() => quizzes.id, { onDelete: "restrict" }),
+    classId: uuid("class_id").references(() => classes.id, { onDelete: "set null" }),
+    hostId: uuid("host_id").references(() => users.id, { onDelete: "set null" }),
+    joinCode: text("join_code").notNull(),
+    status: text("status").notNull().default("lobby"),
+    /** Copy of the quiz settings at the moment the session was created. */
+    settings: jsonb("settings").$type<SessionSettings>().notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    endsAt: timestamp("ends_at", { withTimezone: true }),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("quiz_sessions_inst_idx").on(t.institutionId, t.createdAt),
+    // A join code is unique among sessions that are still open; ended sessions release theirs.
+    uniqueIndex("quiz_sessions_open_code_uq").on(t.joinCode).where(sql`${t.status} <> 'ended'`),
+    check("quiz_sessions_status_ck", sql`${t.status} in ('lobby','active','ended')`),
+  ],
+);
+
+/** Frozen copy of every question in a session (content, key, marks), served from here and nowhere else. */
+export const sessionQuestions = pgTable(
+  "session_questions",
+  {
+    sessionId: uuid("session_id").notNull().references(() => quizSessions.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    questionId: uuid("question_id").notNull(),
+    questionVersion: integer("question_version").notNull(),
+    type: text("type").notNull(),
+    stem: text("stem").notNull(),
+    explanation: text("explanation"),
+    marks: doublePrecision("marks").notNull(),
+    content: jsonb("content").$type<Record<string, unknown>>().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.sessionId, t.position] })],
+);
+
+export const sessionParticipants = pgTable(
+  "session_participants",
+  {
+    id: id(),
+    sessionId: uuid("session_id").notNull().references(() => quizSessions.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    displayName: text("display_name").notNull(),
+    /** This participant's question order (a permutation of session_questions.position). */
+    questionOrder: jsonb("question_order").$type<number[]>().notNull(),
+    currentIndex: integer("current_index").notNull().default(0),
+    /** Server time the current question was first shown. The timer is measured from here, never from the client. */
+    questionServedAt: timestamp("question_served_at", { withTimezone: true }),
+    totalPoints: integer("total_points").notNull().default(0),
+    totalTimeMs: integer("total_time_ms").notNull().default(0),
+    correctCount: integer("correct_count").notNull().default(0),
+    answeredCount: integer("answered_count").notNull().default(0),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("session_participants_session_user_uq").on(t.sessionId, t.userId),
+    index("session_participants_session_idx").on(t.sessionId),
+  ],
+);
+
+/** One row per (participant, question). The unique key makes a double submit impossible to count twice. */
+export const sessionAnswers = pgTable(
+  "session_answers",
+  {
+    participantId: uuid("participant_id").notNull().references(() => sessionParticipants.id, { onDelete: "cascade" }),
+    sessionId: uuid("session_id").notNull(),
+    /** Index in the participant's own order. */
+    index: integer("idx").notNull(),
+    questionPosition: integer("question_position").notNull(),
+    answer: jsonb("answer").$type<unknown>(),
+    correct: boolean("correct").notNull(),
+    late: boolean("late").notNull().default(false),
+    points: integer("points").notNull(),
+    timeMs: integer("time_ms").notNull(),
+    answeredAt: timestamp("answered_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.participantId, t.index] }),
+    index("session_answers_session_q_idx").on(t.sessionId, t.questionPosition),
+    check("session_answers_points_ck", sql`${t.points} >= 0`),
+  ],
+);
+
 /* ------------------------------------------------------------ audit/settings */
 
 /**
@@ -299,3 +435,5 @@ export type Institution = typeof institutions.$inferSelect;
 export type Membership = typeof memberships.$inferSelect;
 export type Question = typeof questions.$inferSelect;
 export type Subject = typeof subjects.$inferSelect;
+export type QuizSession = typeof quizSessions.$inferSelect;
+export type Participant = typeof sessionParticipants.$inferSelect;

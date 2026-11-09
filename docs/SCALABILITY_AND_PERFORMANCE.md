@@ -15,9 +15,14 @@ simultaneous candidates it can support.** The targets in the brief (100–500 �
 - `/admin/overview` runs several aggregate queries per call → cache or materialise at scale.
 - Audit inserts are synchronous per login → consider batching if login volume is high.
 
+## Built in Phase 4 (correct, not yet measured)
+- **Leaderboard:** Redis sorted set per session. Score = `points × 1e8 + (1e8 − 1 − totalTimeMs)`, so higher points win and, on equal points, less total time wins; the participant id is the final tie-break. PostgreSQL is the record; Redis can be rebuilt from it.
+- **Idempotent answers:** primary key `(participant_id, idx)` plus a row lock on the participant, so double-taps and retries cannot double-score.
+- **Fan-out:** one WebSocket room per session, changes batched every 400 ms, Redis pub/sub so several API instances can serve one session. Guard rails: 5 sockets per user, 3000 per session. Players only receive the top 10 and display names.
+- **Fallback:** if WebSockets are unavailable the client polls every 3 s.
+- **Known cost:** each finished player's rank refresh is one HTTP request per few seconds (debounced); a busy 200+ room will make this the first thing to measure.
+
 ## Planned for later phases (not built)
-- **Answer saving:** small idempotent writes, append-only versions, write path separated from marking.
-- **Leaderboard:** Redis sorted sets, score = points with a documented tie-break (earlier completion wins, encoded into the score),
-  idempotency per (participant, question) enforced in both Redis and a DB unique constraint, WebSocket fan-out with batched updates.
+- **Answer saving for exams:** small idempotent writes, append-only versions, write path separated from marking.
 - **Queues:** BullMQ workers for marking, AI jobs, exports.
-- **Load tests:** scripted scenarios for login, exam start, answer saving, simultaneous submit — run at each staged target, with results recorded here.
+- **Load tests (none run yet, including for quizzes):** scripted scenarios for login, join, quiz answering with a live board, exam start, answer saving, simultaneous submit — run at each staged target, with results recorded here.

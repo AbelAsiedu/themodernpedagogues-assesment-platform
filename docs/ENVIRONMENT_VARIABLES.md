@@ -1,7 +1,7 @@
 # Environment variables
 
 Read by `apps/api/src/config.ts` (validated at startup; the server refuses to start on invalid config).
-The web app reads only `API_URL` (server-side, for the proxy rewrite). **No secret is ever read by the web app or sent to the browser.**
+The web app reads only `API_URL` (server-side, for the proxy rewrite) and the optional public `NEXT_PUBLIC_WS_BASE` (a WebSocket address, not a secret). **No secret is ever read by the web app or sent to the browser.**
 
 | Variable | Default | Meaning |
 |---|---|---|
@@ -9,7 +9,7 @@ The web app reads only `API_URL` (server-side, for the proxy rewrite). **No secr
 | `PORT` | 4000 | API port |
 | `DATABASE_URL` | required | PostgreSQL connection string |
 | `TEST_DATABASE_URL` | local test DB | used by tests; name must contain `test` |
-| `REDIS_URL` | unset | enables the Redis-backed rate limiter; without it, limits are per-process in memory |
+| `REDIS_URL` | unset | Redis-backed rate limiter and live leaderboard (sorted sets + pub/sub). Without it, limits are per-process and the leaderboard is served from PostgreSQL on a single instance |
 | `WEB_ORIGINS` | http://localhost:3000 | comma-separated allowed browser origins (CORS + CSRF Origin check) |
 | `SESSION_COOKIE_NAME` | tmp_session | |
 | `SESSION_COOKIE_DOMAIN` | unset | set to `.themodernpedagogues.com` for sibling-subdomain sharing (untested) |
@@ -18,6 +18,7 @@ The web app reads only `API_URL` (server-side, for the proxy rewrite). **No secr
 | `RATE_LIMIT_MAX` | 300 | requests/min/IP |
 | `LOGIN_RATE_LIMIT_MAX` | 20 | logins/15 min/IP |
 | `API_URL` (web) | http://localhost:4000 | where Next.js proxies `/api/v1/*` |
+| `NEXT_PUBLIC_WS_BASE` (web) | unset | e.g. `wss://api.example.com`. Next.js's proxy does not carry WebSockets, so the live board connects to the API directly. Unset: same host (port 4000 when the page is on 3000) |
 
 ### AI (backend only — never put these in the web app or commit them)
 | Variable | Default | Purpose |

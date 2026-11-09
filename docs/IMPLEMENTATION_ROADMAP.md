@@ -1,6 +1,6 @@
 # Implementation roadmap and status
 
-Status as of 2026-11-09. Mirrors `apps/web/src/lib/roadmap.ts` (shown in the app). "Live" means built, connected to the
+Status as of 2026-11-09 (Phases 1, 3 and 4 built). Mirrors `apps/web/src/lib/roadmap.ts` (shown in the app). "Live" means built, connected to the
 API and tested.
 
 | Phase | Scope | Status |
@@ -11,7 +11,8 @@ API and tested.
 | 3 | Question bank (subjects, topics, 4 question types, versioning, human review) | **Done** — 22 tests |
 | 3 | AI Question Studio (OpenAI, validated drafts, quotas, usage log) | **Built, partly verified** — tested against a simulated provider and a local mock HTTP server; the **live OpenAI call has not been run** from the build sandbox (no outbound access) |
 | 3 | Uploads, document/PDF/image extraction, bulk/queued generation | Not started |
-| 4 | Assessments (live quiz, self-paced, homework), objective marking, live leaderboard | Not started |
+| 4 | Quizzes, **join codes**, live and homework sessions, objective marking, **live leaderboard** (Redis + WebSocket) | **Done, with limits** — 49 tests incl. real WebSocket and Redis; checked in a real browser with 3 students at once. **No load test has been run; no capacity claim.** |
+| 4 | Per-student reports/exports, joining without an account (guest), teacher-paced "next question" mode | Not started |
 | 5 | Exam engine, BECE/WASSCE templates, scheduling, exam interface, control room | Not started |
 | 6 | Rubrics, AI-assisted marking, moderation, results, analytics, reports | Not started |
 | 7 | AI management, platform settings, notifications, remaining admin tools | Not started |

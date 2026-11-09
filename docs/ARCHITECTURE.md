@@ -40,9 +40,19 @@ never against a client-supplied one. Details and tests: [AUTHENTICATION_AND_PERM
 3. Route: validate input with Zod → `app.authorize(req, permission, scope)` → business logic → audit record.
 4. Errors are mapped centrally; unknown errors return a generic 500 (no internals leaked).
 
+## Live quizzes (Phase 4)
+
+- A teacher builds a **quiz** from approved questions; each item pins a `question_version`. Opening it creates a **session** with a
+  6-character **join code** (alphabet without look-alikes `0/O/1/I/L`, drawn with `crypto.randomInt`; unique among open sessions only).
+  Starting a session freezes the pinned questions into `session_questions`, so later edits never change a game in progress.
+- Students sign in, enter the code and play at their own pace through a per-student shuffled order. The server holds the
+  per-question clock and marks deterministically. **No AI is involved anywhere in play or marking.**
+- `LiveHub` (WebSocket at `/api/v1/sessions/:id/live`) pushes role-filtered leaderboard/status events, batched every 400 ms, using Redis
+  pub/sub across instances. The leaderboard is a Redis sorted set rebuilt from PostgreSQL if lost.
+
 ## Not yet built (design intent only)
 
-Question bank, AI layer, assessments, exam engine, marking, results, leaderboard, notifications, reports, file uploads.
+Exam engine, essay/AI marking, results, notifications, reports, file uploads. (Question bank, AI layer, quizzes and the live leaderboard are built.)
 Their intended designs are in [AI_SYSTEM_DESIGN.md](AI_SYSTEM_DESIGN.md), [EXAMINATION_ENGINE.md](EXAMINATION_ENGINE.md),
 [MARKING_AND_GRADING.md](MARKING_AND_GRADING.md) and [SCALABILITY_AND_PERFORMANCE.md](SCALABILITY_AND_PERFORMANCE.md).
 

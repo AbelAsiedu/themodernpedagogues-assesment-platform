@@ -23,6 +23,21 @@
 Two deliberate breaks of `can()` (ignore institution scope; allow delegating super-admin-only permissions) made
 6 and 1 tests fail respectively, then were reverted. The tests do detect these regressions.
 
+## Live quizzes (Phase 4) — what is protected and tested
+
+| Concern | Control | Evidence |
+|---|---|---|
+| Answer key leaking to players | player views are built by `publicQuestion`, which strips the key; the key is returned only with feedback after that student has answered | unit + route tests; mutation check (leaking the key fails 2 tests) |
+| Guessing join codes | 6 chars from a 31-symbol alphabet (~887 million combinations), `crypto.randomInt`, 30 attempts/min per user, **identical** 404 for unknown/ended/other-school codes, codes released when a session ends | tests; this limits guessing but is not a substitute for school/class membership checks, which also apply |
+| Joining another school's quiz | join requires membership of the session's school (and class, if restricted) | tenant tests |
+| Double-submit / replay / racing taps | PK `(participant_id, idx)` + row lock; replays return the first result | concurrency test; mutation check (removing the lock fails it) |
+| Cheating the clock | server owns `question_served_at`; late answers score 0 | tests |
+| WebSocket abuse | Origin allow-list (cross-site hijacking), session cookie auth, 1 KB max message, 5 sockets/user, 3000/session, role-filtered payloads (players: top 10 + display names only; nothing if the board is hidden) | real-socket tests |
+| Student privacy | classmates see only display names; real names go to the teacher view only | tests |
+
+**Not covered:** no load/abuse test of the hub; display names are student-chosen (regex-limited, no profanity filter); a student can share the
+code with someone in the same school; there is no proctoring and none is claimed.
+
 ## NOT done — do before real student data
 
 - **Separate DB roles.** The app currently connects as the table owner, who can drop the audit trigger. Use a
