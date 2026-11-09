@@ -194,3 +194,37 @@ input:focus-visible, select:focus-visible { outline-offset: 0; border-color: var
 @media (prefers-reduced-motion: reduce) {
   .skeleton { animation: none; }
 }
+
+/* ---------- question bank ---------- */
+textarea { font: inherit; width: 100%; padding: 0.55rem 0.7rem; border: 1.5px solid #9aa5bd; border-radius: var(--radius); background: #fff; color: var(--ink); resize: vertical; }
+textarea:focus-visible { outline-offset: 0; border-color: var(--focus); }
+fieldset.field { border: 0; padding: 0; margin: 0; min-width: 0; }
+fieldset.field legend { font-weight: 700; padding: 0; margin-bottom: 0.35rem; }
+.form.wide { max-width: 44rem; }
+.row2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 1rem; }
+.optrow { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.45rem; }
+.optrow input:not([type="radio"]) { flex: 1; min-width: 0; }
+.optrow input[type="radio"], label.inline input { width: 1.4rem; height: 1.4rem; accent-color: var(--ink); }
+.optlabel { font-weight: 700; }
+label.inline { display: inline-flex; align-items: center; gap: 0.4rem; margin-right: 1.2rem; font-weight: 400; min-height: 44px; }
+.qview { display: grid; gap: 0.6rem; }
+.qstem { font-size: var(--step-1); font-family: var(--font-display); line-height: 1.3; max-width: 60ch; }
+.opts { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.25rem; }
+.opts li { padding: 0.35rem 0.6rem; border-left: 3px solid transparent; }
+.opts li.right { border-left-color: var(--ok); background: var(--ok-wash); }
+.tick { color: var(--ok); font-weight: 700; font-size: var(--step--1); }
+.key, .expl { max-width: none; }
+.expl { color: var(--ink-soft); }
+.qmeta { color: var(--ink-soft); font-size: var(--step--1); max-width: none; display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; }
+.rubric { list-style: none; margin: 0; padding: 0; max-width: 34rem; }
+.rubric li { display: flex; gap: 0.5rem; align-items: baseline; padding: 0.25rem 0; }
+.rubric .dots { flex: 1; border-bottom: 2px dotted var(--rule); min-width: 1rem; }
+.rubric .m { font-weight: 700; font-variant-numeric: tabular-nums; }
+.qcard { background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--rule); border-radius: var(--radius); padding: 1rem 1.1rem; display: grid; gap: 0.8rem; }
+.qcard.needs_review { border-left-color: var(--wait); }
+.qcard.approved { border-left-color: var(--ok); }
+.qcard.rejected { border-left-color: var(--pen); }
+.qcard-head { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; justify-content: space-between; align-items: center; }
+.stack { display: grid; gap: 1rem; }
+.stem-cell { max-width: 34rem; overflow-wrap: anywhere; }
+a.rowlink { color: var(--ink); font-weight: 700; }

@@ -15,6 +15,13 @@
       "when": 1794073281772,
       "tag": "0001_audit_immutable",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794266017865,
+      "tag": "0002_questions_and_ai",
+      "breakpoints": true
     }
   ]
 }

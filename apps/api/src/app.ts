@@ -16,12 +16,17 @@ import { userRoutes } from "./routes/users.js";
 import { institutionRoutes } from "./routes/institutions.js";
 import { classRoutes } from "./routes/classes.js";
 import { adminRoutes } from "./routes/admin.js";
+import { questionRoutes } from "./routes/questions.js";
+import { aiRoutes } from "./routes/ai.js";
+import type { AiProvider } from "./ai/provider.js";
 
 export interface AppDeps {
   config: Config;
   db: Db;
   sql: Sql;
   redis?: Redis;
+  /** Undefined when no AI provider is configured. */
+  ai?: AiProvider;
 }
 
 declare module "fastify" {
@@ -137,6 +142,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       await v1.register(institutionRoutes);
       await v1.register(classRoutes);
       await v1.register(adminRoutes);
+      await v1.register(questionRoutes);
+      await v1.register(aiRoutes);
     },
     { prefix: "/api/v1" },
   );

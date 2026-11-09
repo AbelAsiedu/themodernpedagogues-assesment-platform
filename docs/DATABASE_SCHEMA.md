@@ -1,8 +1,7 @@
 # Database schema
 
 PostgreSQL 16. Source of truth: `apps/api/src/db/schema.ts`; migrations in `apps/api/drizzle/` (plain SQL).
-Only the tables below exist. Question bank, exams, responses, results, AI jobs, notifications, files and reports
-are **not created yet**.
+Only the tables below exist. Exams, responses, results, notifications, files and reports are **not created yet**.
 
 ```mermaid
 erDiagram
@@ -25,6 +24,11 @@ erDiagram
 | classes | classes within an institution | unique (institution, name, academic year) |
 | class_members | who is in a class | PK (class, user); role teacher/student |
 | audit_logs | append-only event log | **trigger blocks UPDATE, DELETE, TRUNCATE** |
+| subjects | per-school subjects | unique (institution, name, level) |
+| topics | topics within a subject | unique (subject, name); carries institution_id |
+| questions | the bank; type-specific answer data in `content` jsonb (validated by Zod before every write) | CHECKs on type/status/difficulty/source/marks; **CHECK: an AI question cannot be `approved` without a `reviewed_by`** |
+| question_versions | snapshot of every version | PK (question, version) |
+| ai_generations | one row per AI request (ok or failed): provider, model, prompt version, tokens, latency, counts, error | status CHECK; grounding text is NOT stored, only its length |
 | platform_settings | key/value settings | created, not yet used by any feature |
 
 ## Audit immutability

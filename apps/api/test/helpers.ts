@@ -3,6 +3,7 @@ import { buildApp } from "../src/app.js";
 import { loadConfig } from "../src/config.js";
 import { createDb } from "../src/db/client.js";
 import { seed } from "../src/db/seed.js";
+import type { AiProvider } from "../src/ai/provider.js";
 import { TEST_DB_URL } from "./global-setup.js";
 
 export const PASSWORD = "Test-Password-123";
@@ -16,17 +17,18 @@ export interface TestEnv {
   close(): Promise<void>;
 }
 
-export async function startTestEnv(): Promise<TestEnv> {
+export async function startTestEnv(opts: { ai?: AiProvider; env?: Record<string, string> } = {}): Promise<TestEnv> {
   const config = loadConfig({
     NODE_ENV: "test",
     DATABASE_URL: TEST_DB_URL,
     RATE_LIMIT_MAX: "100000",
     LOGIN_RATE_LIMIT_MAX: "100000",
     WEB_ORIGINS: ORIGIN,
+    ...opts.env,
   } as NodeJS.ProcessEnv);
   const { db, sql } = createDb(TEST_DB_URL, { max: 5 });
   const ids = await seed(db, PASSWORD);
-  const app = await buildApp({ config, db, sql });
+  const app = await buildApp({ config, db, sql, ai: opts.ai });
   await app.ready();
   return {
     app,

@@ -4,7 +4,7 @@
  * Password comes from SEED_PASSWORD, so no credentials are hardcoded in the repo.
  */
 import { createDb, type Db } from "./client.js";
-import { classMembers, classes, institutions, memberships, users } from "./schema.js";
+import { classMembers, classes, institutions, memberships, subjects, topics, users } from "./schema.js";
 import { hashPassword } from "../security/password.js";
 import { and, eq } from "drizzle-orm";
 
@@ -48,6 +48,13 @@ export async function seed(db: Db, password: string) {
       { classId: cls!.id, userId: teacher.id, role: "teacher" },
       { classId: cls!.id, userId: student.id, role: "student" },
     ]).onConflictDoNothing();
+    // A subject with topics so the question bank has somewhere to start. No questions are seeded.
+    await db.insert(subjects).values({ institutionId: inst.id, name: "Social Studies", level: "JHS 3", createdBy: teacher.id }).onConflictDoNothing();
+    const [sub] = await db.select().from(subjects).where(and(eq(subjects.institutionId, inst.id), eq(subjects.name, "Social Studies")));
+    for (const name of ["Environment", "Peace building", "Family and marriage"]) {
+      await db.insert(topics).values({ subjectId: sub!.id, institutionId: inst.id, name }).onConflictDoNothing();
+    }
+    out[`${tag}SubjectId`] = sub!.id;
     out[`${tag}ClassId`] = cls!.id;
     out[`${tag}TeacherId`] = teacher.id;
     out[`${tag}StudentId`] = student.id;

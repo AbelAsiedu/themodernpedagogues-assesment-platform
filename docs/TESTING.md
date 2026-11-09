@@ -8,20 +8,22 @@ pnpm typecheck
 Integration tests run **against real PostgreSQL** (database name must contain `test` or setup refuses to run), using the
 real migrations (including the audit triggers), the real Fastify app (`inject`), real Argon2 hashing and real sessions.
 
-## What exists — 42 tests, all passing
+## What exists — 83 tests, all passing
 
 | File | Count | Proves |
 |---|---|---|
 | `authz.unit.test.ts` | 8 | `can()` scope, suspended memberships/institutions, delegation limits |
 | `auth.test.ts` | 10 | cookie flags, no enumeration, lockout, suspension kills live session, logout revokes, CSRF |
 | `tenant-isolation.test.ts` | 12 | school A cannot read/modify school B by any route or by mixing ids; student scoping; suspended school loses access |
+| `question-bank.test.ts` | 22 | subject/topic rules, per-type validation (MCQ duplicates, essay marks = rubric total), cross-school subject/topic refusal, tenant isolation on list/read/edit/review/archive, non-disclosure of ids, read-only platform staff, lifecycle (submit/approve/reject/archive), edit-after-approval returns to review with version history, DB constraint blocking unreviewed approved AI questions |
+| `ai-studio.test.ts` | 19 | AI output saved only as `needs_review`; invalid/duplicate items dropped; options re-shuffled with key preserved; one bounded retry on bad shape; grounding text fenced and not stored; provider failures mapped and logged with nothing saved; per-user daily quota; access control and 503 when unconfigured; **real OpenAI client over mocked HTTP** (strict json_schema, Bearer key, status mapping, key never leaked) |
 | `privileges-and-audit.test.ts` | 12 | platform endpoints closed to school roles, no self-escalation, delegation works and is revocable, real overview counts, audit completeness and immutability |
 
 ## What does NOT exist
 
 - Web/UI tests and automated browser end-to-end tests (the UI was checked manually with screenshots in headless Chrome).
 - Load, concurrency and performance tests — **no capacity figure exists or is claimed.**
-- Tests for features not built (exams, marking, AI, leaderboard).
+- Tests for features not built (exams, marking, leaderboard). AI is tested against simulations only — **never against the real OpenAI service**.
 - CI pipeline.
 
 ## Notes

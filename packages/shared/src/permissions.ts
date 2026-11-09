@@ -33,6 +33,13 @@ export const PERMISSIONS = [
   // classes
   "classes.read",
   "classes.manage",
+  // question bank
+  "questions.read",
+  "questions.write",
+  "questions.review",
+  "subjects.manage",
+  // AI
+  "ai.generate",
   // audit & settings
   "audit.read",
   "settings.read",
@@ -46,14 +53,20 @@ const ALL: readonly Permission[] = PERMISSIONS;
 export const PLATFORM_ROLE_PERMISSIONS: Record<PlatformRole, readonly Permission[]> = {
   super_admin: ALL,
   // platform_admin starts with operational read access; the super admin grants more per user.
-  platform_admin: ["users.read", "institutions.read", "members.read", "classes.read", "audit.read", "settings.read"],
-  academic_admin: ["institutions.read", "members.read", "classes.read", "settings.read"],
+  platform_admin: ["users.read", "institutions.read", "members.read", "classes.read", "questions.read", "audit.read", "settings.read"],
+  academic_admin: ["institutions.read", "members.read", "classes.read", "questions.read", "questions.review", "settings.read"],
 };
 
 /** Permissions an institution role holds, always scoped to its own institution. */
 export const INSTITUTION_ROLE_PERMISSIONS: Record<InstitutionRole, readonly Permission[]> = {
-  institution_admin: ["members.read", "members.manage", "classes.read", "classes.manage", "institutions.read", "institutions.update"],
-  teacher: ["members.read", "classes.read", "classes.manage"],
+  institution_admin: [
+    "members.read", "members.manage", "classes.read", "classes.manage", "institutions.read", "institutions.update",
+    "questions.read", "questions.write", "questions.review", "subjects.manage", "ai.generate",
+  ],
+  teacher: [
+    "members.read", "classes.read", "classes.manage",
+    "questions.read", "questions.write", "questions.review", "subjects.manage", "ai.generate",
+  ],
   student: ["classes.read"],
 };
 

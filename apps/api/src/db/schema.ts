@@ -2,6 +2,8 @@ import { sql } from "drizzle-orm";
 import {
   bigserial,
   check,
+  doublePrecision,
+  integer,
   index,
   jsonb,
   pgTable,
@@ -147,6 +149,115 @@ export const classMembers = pgTable(
   ],
 );
 
+
+/* ----------------------------------------------------------- question bank */
+
+export const subjects = pgTable(
+  "subjects",
+  {
+    id: id(),
+    institutionId: uuid("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    level: text("level").notNull(),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("subjects_inst_name_level_uq").on(t.institutionId, t.name, t.level)],
+);
+
+export const topics = pgTable(
+  "topics",
+  {
+    id: id(),
+    subjectId: uuid("subject_id").notNull().references(() => subjects.id, { onDelete: "cascade" }),
+    institutionId: uuid("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("topics_subject_name_uq").on(t.subjectId, t.name), index("topics_institution_idx").on(t.institutionId)],
+);
+
+/** One row per generation request, successful or not. Never contains the API key. */
+export const aiGenerations = pgTable(
+  "ai_generations",
+  {
+    id: id(),
+    institutionId: uuid("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+    requestedBy: uuid("requested_by").references(() => users.id, { onDelete: "set null" }),
+    provider: text("provider").notNull(),
+    model: text("model").notNull(),
+    promptVersion: text("prompt_version").notNull(),
+    /** What was asked for (counts, type, difficulty…). The grounding text itself is not stored, only its length. */
+    params: jsonb("params").$type<Record<string, unknown>>().notNull().default({}),
+    status: text("status").notNull(),
+    requestedCount: integer("requested_count").notNull(),
+    savedCount: integer("saved_count").notNull().default(0),
+    rejectedCount: integer("rejected_count").notNull().default(0),
+    tokensIn: integer("tokens_in"),
+    tokensOut: integer("tokens_out"),
+    latencyMs: integer("latency_ms"),
+    error: text("error"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("ai_generations_inst_time_idx").on(t.institutionId, t.createdAt),
+    index("ai_generations_user_time_idx").on(t.requestedBy, t.createdAt),
+    check("ai_generations_status_ck", sql`${t.status} in ('succeeded','failed')`),
+  ],
+);
+
+export const questions = pgTable(
+  "questions",
+  {
+    id: id(),
+    institutionId: uuid("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+    subjectId: uuid("subject_id").notNull().references(() => subjects.id, { onDelete: "restrict" }),
+    topicId: uuid("topic_id").references(() => topics.id, { onDelete: "set null" }),
+    type: text("type").notNull(),
+    stem: text("stem").notNull(),
+    explanation: text("explanation"),
+    difficulty: text("difficulty").notNull().default("medium"),
+    marks: doublePrecision("marks").notNull().default(1),
+    /** Type-specific answer data (options + key, accepted answers, rubric). Validated by Zod before every write. */
+    content: jsonb("content").$type<Record<string, unknown>>().notNull(),
+    status: text("status").notNull().default("draft"),
+    source: text("source").notNull().default("manual"),
+    aiGenerationId: uuid("ai_generation_id").references(() => aiGenerations.id, { onDelete: "set null" }),
+    version: integer("version").notNull().default(1),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    reviewNote: text("review_note"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("questions_inst_status_idx").on(t.institutionId, t.status),
+    index("questions_subject_idx").on(t.subjectId),
+    index("questions_topic_idx").on(t.topicId),
+    check("questions_type_ck", sql`${t.type} in ('mcq','true_false','short_answer','essay')`),
+    check("questions_difficulty_ck", sql`${t.difficulty} in ('easy','medium','hard')`),
+    check("questions_status_ck", sql`${t.status} in ('draft','needs_review','approved','rejected','archived')`),
+    check("questions_source_ck", sql`${t.source} in ('manual','ai')`),
+    check("questions_marks_ck", sql`${t.marks} > 0`),
+    // The database itself refuses to hold an AI-written question that skipped human review.
+    check("questions_ai_reviewed_ck", sql`${t.source} <> 'ai' or ${t.status} not in ('approved') or ${t.reviewedBy} is not null`),
+  ],
+);
+
+/** Every content version is kept, so a question used in a past exam can always be shown as it was. */
+export const questionVersions = pgTable(
+  "question_versions",
+  {
+    questionId: uuid("question_id").notNull().references(() => questions.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    snapshot: jsonb("snapshot").$type<Record<string, unknown>>().notNull(),
+    changedBy: uuid("changed_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.questionId, t.version] })],
+);
+
 /* ------------------------------------------------------------ audit/settings */
 
 /**
@@ -186,3 +297,5 @@ export const platformSettings = pgTable("platform_settings", {
 export type User = typeof users.$inferSelect;
 export type Institution = typeof institutions.$inferSelect;
 export type Membership = typeof memberships.$inferSelect;
+export type Question = typeof questions.$inferSelect;
+export type Subject = typeof subjects.$inferSelect;

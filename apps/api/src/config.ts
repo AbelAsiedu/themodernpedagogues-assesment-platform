@@ -10,6 +10,14 @@ const schema = z.object({
   SESSION_COOKIE_DOMAIN: z.string().optional(),
   SESSION_TTL_HOURS: z.coerce.number().positive().default(12),
   SEED_PASSWORD: z.string().optional(),
+  // AI. Backend-only. With no key configured the AI endpoints answer 503 and the rest of the app is unaffected.
+  AI_PROVIDER: z.enum(["none", "openai"]).default("none"),
+  AI_API_KEY: z.string().optional(),
+  AI_MODEL: z.string().default("gpt-4o-mini"),
+  AI_BASE_URL: z.string().url().optional(),
+  AI_TIMEOUT_MS: z.coerce.number().int().positive().default(60_000),
+  AI_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(10),
+  AI_DAILY_LIMIT_PER_USER: z.coerce.number().int().positive().default(30),
   // Per-IP limits. Defaults are production-safe; tests raise them to avoid throttling themselves.
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
   LOGIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
@@ -27,6 +35,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   return {
     ...c,
     SESSION_COOKIE_DOMAIN: c.SESSION_COOKIE_DOMAIN || undefined,
+    AI_API_KEY: c.AI_API_KEY || undefined,
+    AI_BASE_URL: c.AI_BASE_URL || undefined,
     webOrigins: c.WEB_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean),
     isProd: c.NODE_ENV === "production",
   };

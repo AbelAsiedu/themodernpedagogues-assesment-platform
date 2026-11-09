@@ -11,12 +11,21 @@ export interface NavItem {
  * Planned modules (question bank, exams, marking…) live on the Roadmap page with an honest status,
  * rather than as links that go nowhere.
  */
+/** True if the person holds the permission platform-wide or in at least one active school. */
+function hasQuestionAccess(me: Me, permission: "questions.read" | "ai.generate"): boolean {
+  if (me.platformPermissions.includes(permission)) return true;
+  return me.institutions.some((i) => i.status === "active" && hasPerm(me, permission, i.institutionId));
+}
+
 export function navFor(me: Me): NavItem[] {
   const items: NavItem[] = [{ href: "/overview", label: "Overview" }];
   const platformStaff = me.platformRole !== null;
 
   if (hasPerm(me, "institutions.read")) items.push({ href: "/institutions", label: "Institutions" });
   if (hasPerm(me, "users.read")) items.push({ href: "/users", label: "Users" });
+
+  if (hasQuestionAccess(me, "questions.read")) items.push({ href: "/questions", label: "Question bank" });
+  if (hasQuestionAccess(me, "ai.generate")) items.push({ href: "/studio", label: "AI Studio" });
 
   if (!platformStaff) {
     for (const inst of me.institutions.filter((i) => i.status === "active")) {

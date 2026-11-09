@@ -19,4 +19,15 @@ The web app reads only `API_URL` (server-side, for the proxy rewrite). **No secr
 | `LOGIN_RATE_LIMIT_MAX` | 20 | logins/15 min/IP |
 | `API_URL` (web) | http://localhost:4000 | where Next.js proxies `/api/v1/*` |
 
-Reserved for later phases, not read by anything yet: `AI_PROVIDER`, `AI_API_KEY`.
+### AI (backend only — never put these in the web app or commit them)
+| Variable | Default | Purpose |
+|---|---|---|
+| `AI_PROVIDER` | none | `none` or `openai`. With `none`, or no key, AI endpoints answer 503 and nothing else is affected |
+| `AI_API_KEY` | unset | provider secret. Lives only in `apps/api/.env` (gitignored) or your host's secret store |
+| `AI_MODEL` | gpt-4o-mini | model id; must support Structured Outputs |
+| `AI_BASE_URL` | https://api.openai.com/v1 | override for proxies/tests |
+| `AI_TIMEOUT_MS` | 60000 | per-call timeout |
+| `AI_DAILY_LIMIT_PER_USER` | 30 | generation requests per user per 24 h (failed attempts count) |
+| `AI_RATE_LIMIT_PER_MIN` | 10 | per-IP limit on the generate endpoint |
+
+`pnpm dev:api`, `pnpm --filter @tmp/api start`, `db:migrate` and `db:seed` read `apps/api/.env` automatically (Node `--env-file-if-exists`).

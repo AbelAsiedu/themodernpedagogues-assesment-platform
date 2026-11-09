@@ -39,6 +39,18 @@ Status codes: 401 not signed in · 403 not allowed · 404 not found (platform st
 | GET `/admin/overview` | users.read (platform) | real counts only |
 | GET `/audit` | audit.read (platform) | filters: `action` prefix, `outcome`, `actorUserId`; `limit≤200` |
 
+| GET/POST `/institutions/:id/subjects` | questions.read / subjects.manage (scope) | subjects returned with their topics |
+| POST `/subjects/:id/topics` | subjects.manage (its institution) | |
+| GET/POST `/institutions/:id/questions` | questions.read / questions.write (scope) | GET filters: subjectId, topicId, status, type, source, q, limit≤100, offset |
+| GET `/questions/:id` | questions.read (its institution) | includes version list |
+| PATCH `/questions/:id` | questions.write (its institution) | type is immutable; editing a non-draft sends it back to `needs_review` and bumps `version` |
+| POST `/questions/:id/submit-for-review` | questions.write | draft/rejected → needs_review |
+| POST `/questions/:id/review` | questions.review (its institution) | `{decision: approve\|reject, note?}`; only route that can approve; re-validates at approval |
+| POST `/questions/:id/archive` | questions.write | |
+| GET `/institutions/:id/ai/status` | ai.generate (scope) | configured?, model, quota used; never the key |
+| GET `/institutions/:id/ai/generations` | ai.generate (scope) | last 50 requests |
+| POST `/institutions/:id/ai/generate-questions` | ai.generate (scope) | 1–10 questions; saved as `needs_review`/`ai`; 503 unconfigured, 429 quota, 502/504 provider failure |
+
 No OpenAPI document is generated yet; this file is maintained by hand.
 
 Rate limits: 300 requests/min/IP globally; 20 logins/15 min/IP (`RATE_LIMIT_MAX`, `LOGIN_RATE_LIMIT_MAX`).

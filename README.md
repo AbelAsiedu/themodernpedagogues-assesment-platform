@@ -2,8 +2,9 @@
 
 AI-powered assessment and examination platform for The Modern Pedagogues (TMP).
 
-> **Status: Phase 1 foundation only.** Accounts, permissions, schools, classes and the audit log work and are tested.
-> Quizzes, the question bank, AI generation, the BECE/WASSCE exam engine, marking and the live leaderboard are
+> **Status: Phases 1 and 3.** Accounts, permissions, schools, classes, the audit log, the **question bank** and the
+> **AI Question Studio** work and are tested (83 tests). The AI Studio has been tested against a simulated provider only; the
+> live OpenAI call has not been run yet. Quizzes, the BECE/WASSCE exam engine, marking and the live leaderboard are
 > **not built yet**. See [IMPLEMENTATION_ROADMAP.md](docs/IMPLEMENTATION_ROADMAP.md) and
 > [KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md). Nothing is deployed.
 
@@ -11,7 +12,7 @@ AI-powered assessment and examination platform for The Modern Pedagogues (TMP).
 
 ```
 apps/api         Fastify + TypeScript API, Drizzle ORM, PostgreSQL migrations, tests
-apps/web         Next.js web app (sign-in, role-aware shell, schools, users, audit log, roadmap)
+apps/web         Next.js web app (sign-in, role-aware shell, schools, users, audit log, question bank, AI Studio, roadmap)
 packages/shared  Roles, permissions and validation schemas shared by both apps
 docs/            Architecture, schema, API, security, deployment, testing
 ```
@@ -24,6 +25,7 @@ Requires Node 22+, pnpm 10, PostgreSQL 16, Redis 7.
 pnpm install
 cp .env.example apps/api/.env          # edit if your database differs
 createdb tmp_assessment && createdb tmp_assessment_test   # role/password must match the URLs in .env
+# To enable AI: add AI_PROVIDER=openai and AI_API_KEY=... to apps/api/.env (backend only; never commit it)
 pnpm db:migrate                         # apply migrations
 SEED_PASSWORD='choose-one' pnpm db:seed # DEV ONLY: two demo schools, accounts *@tmp.test
 pnpm dev:api                            # http://localhost:4000
