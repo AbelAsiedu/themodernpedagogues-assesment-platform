@@ -63,6 +63,21 @@ Status codes: 401 not signed in · 403 not allowed · 404 not found (platform st
 | GET `/sessions/:id/leaderboard` | participant or host | role-filtered; same data as the WebSocket (HTTP fallback) |
 | WS `/sessions/:id/live` | participant or host | origin allow-listed; close 4401 unauthenticated, 4403 not allowed, 4408 too many connections |
 
+| GET/POST `/institutions/:id/exams` | exams.manage (scope) | POST: title, duration 5–360 min, ≤10 sections each `answer_all` or `answer_any n`, approved questions only; `official_verified` needs `sourceSpec` |
+| GET `/exams/:id` · POST `/exams/:id/archive` | exams.manage (its institution) | |
+| POST `/exams/:id/sittings` | exams.manage (its institution) | `{classId?, opensAt, closesAt}`; window ≥ duration; freezes the questions |
+| GET `/institutions/:id/sittings` | exams.manage (scope) | with started/submitted counts |
+| GET `/sittings/:id` | exams.manage (its institution) | control room: per-candidate status, answered, deadline |
+| POST `/sittings/:id/cancel` | exams.manage | only before anyone has started |
+| GET `/sittings/:id/results` · POST `/sittings/:id/release-results` | exams.manage | marks exclude unmarked essays; release only after close |
+| POST `/exam-sessions/:id/extend` | exams.manage (its institution) | `{minutes 1–120, reason}`, audited; refused once the attempt has ended |
+| GET `/my/exams` | signed-in student | only sittings for their school/class |
+| POST `/sittings/:id/start` | exams.take (student of that school/class) | idempotent; 409 `exam_not_open` / `exam_closed` / `exam_cancelled`; everyone else 404 |
+| GET `/exam-sessions/:id` | the candidate only | questions without the key, saved answers, server clock; auto-submits if time is up |
+| PUT `/exam-sessions/:id/responses/:position` | the candidate only | `{seq, answer}`; stale `seq` → 200 `applied:false`; 409 `time_up` / `exam_submitted` |
+| POST `/exam-sessions/:id/submit` | the candidate only | idempotent; returns the receipt; optional `{timeUp:true}` |
+| GET `/exam-sessions/:id/result` | the candidate only | receipt only until released; then marks, never the key |
+
 No OpenAPI document is generated yet; this file is maintained by hand.
 
 Rate limits: 300 requests/min globally (per signed-in user, or per IP when anonymous, so a classroom behind one school IP is not throttled together); 20 logins/15 min/IP (`RATE_LIMIT_MAX`, `LOGIN_RATE_LIMIT_MAX`).

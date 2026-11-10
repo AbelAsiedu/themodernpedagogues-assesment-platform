@@ -21,6 +21,9 @@ import { aiRoutes } from "./routes/ai.js";
 import { quizRoutes } from "./routes/quizzes.js";
 import { playRoutes } from "./routes/play.js";
 import { liveRoutes } from "./routes/live.js";
+import { examRoutes } from "./routes/exams.js";
+import { examPlayRoutes } from "./routes/examPlay.js";
+import { ExamEngine } from "./exam/engine.js";
 import websocket from "@fastify/websocket";
 import { Leaderboard } from "./quiz/leaderboard.js";
 import { LiveHub } from "./quiz/hub.js";
@@ -44,6 +47,7 @@ declare module "fastify" {
     deps: AppDeps;
     leaderboard: Leaderboard;
     hub: LiveHub;
+    exams: ExamEngine;
     /** Resolve the signed-in actor or throw 401. */
     requireActor(req: FastifyRequest): Actor;
     /** Throw 403 (and write a denied audit record) unless the actor holds the permission in scope. */
@@ -65,6 +69,16 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   const hub = new LiveHub(db, leaderboard, deps.redis);
   app.decorate("leaderboard", leaderboard);
   app.decorate("hub", hub);
+  const exams = new ExamEngine(db, (m, e) => app.log.error({ err: e }, m));
+  app.decorate("exams", exams);
+  // Housekeeping: auto-submit attempts whose deadline has passed, and finish pending marking. Tests call sweep() themselves.
+  if (config.NODE_ENV !== "test") {
+    const timer = setInterval(() => void exams.sweep().catch((e) => app.log.error({ err: e }, "exam sweep failed")), 15_000);
+    timer.unref();
+    app.addHook("onClose", async () => { clearInterval(timer); await exams.idle(); });
+  } else {
+    app.addHook("onClose", async () => { await exams.idle(); });
+  }
   await hub.start();
   app.addHook("onClose", async () => { await hub.stop(); });
 
@@ -165,6 +179,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       await v1.register(quizRoutes);
       await v1.register(playRoutes);
       await v1.register(liveRoutes);
+      await v1.register(examRoutes);
+      await v1.register(examPlayRoutes);
     },
     { prefix: "/api/v1" },
   );

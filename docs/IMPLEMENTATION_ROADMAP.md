@@ -1,6 +1,6 @@
 # Implementation roadmap and status
 
-Status as of 2026-11-09 (Phases 1, 3 and 4 built). Mirrors `apps/web/src/lib/roadmap.ts` (shown in the app). "Live" means built, connected to the
+Status as of 2026-11-10 (Phases 1, 3, 4 and 5 built). Mirrors `apps/web/src/lib/roadmap.ts` (shown in the app). "Live" means built, connected to the
 API and tested.
 
 | Phase | Scope | Status |
@@ -13,7 +13,8 @@ API and tested.
 | 3 | Uploads, document/PDF/image extraction, bulk/queued generation | Not started |
 | 4 | Quizzes, **join codes**, live and homework sessions, objective marking, **live leaderboard** (Redis + WebSocket) | **Done, with limits** — 49 tests incl. real WebSocket and Redis; checked in a real browser with 3 students at once. **No load test has been run; no capacity claim.** |
 | 4 | Per-student reports/exports, joining without an account (guest), teacher-paced "next question" mode | Not started |
-| 5 | Exam engine, BECE/WASSCE templates, scheduling, exam interface, control room | Not started |
+| 5 | Exam engine: sectioned exams, scheduling, server-owned deadlines, idempotent ordered saves, receipt, auto-submit, deterministic objective marking, exam room UI, basic control room, results release | **Done, with limits** — 34 tests incl. concurrency and lock-ordering; checked in a real browser (offline recovery, reload restore, auto-submit). **No load test; no capacity claim.** |
+| 5 | Official-style BECE/WASSCE templates, pause/invigilation tools, multi-part questions | Not started (templates need verified specifications from TMP) |
 | 6 | Rubrics, AI-assisted marking, moderation, results, analytics, reports | Not started |
 | 7 | AI management, platform settings, notifications, remaining admin tools | Not started |
 | 8 | Load, concurrency and security testing, optimisation | Not started |

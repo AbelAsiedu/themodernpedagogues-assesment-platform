@@ -394,6 +394,205 @@ export const sessionAnswers = pgTable(
   ],
 );
 
+/* ------------------------------------------------------------- examinations */
+
+/** A reusable exam structure. Sitting it (scheduling it) freezes a copy, so editing or archiving this never alters a sitting. */
+export const exams = pgTable(
+  "exams",
+  {
+    id: id(),
+    institutionId: uuid("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    instructions: text("instructions"),
+    durationMinutes: integer("duration_minutes").notNull(),
+    shuffleOptions: boolean("shuffle_options").notNull().default(true),
+    provenance: text("provenance").notNull().default("teacher_created"),
+    sourceSpec: text("source_spec"),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("exams_institution_idx").on(t.institutionId),
+    check("exams_duration_ck", sql`${t.durationMinutes} between 5 and 360`),
+    check("exams_provenance_ck", sql`${t.provenance} in ('teacher_created','tmp_practice','official_verified')`),
+    // The database refuses an "official" structure that doesn't say where it was verified from.
+    check("exams_official_source_ck", sql`${t.provenance} <> 'official_verified' or ${t.sourceSpec} is not null`),
+  ],
+);
+
+export const examSections = pgTable(
+  "exam_sections",
+  {
+    examId: uuid("exam_id").notNull().references(() => exams.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    title: text("title").notNull(),
+    instructions: text("instructions"),
+    ruleType: text("rule_type").notNull().default("answer_all"),
+    ruleCount: integer("rule_count"),
+  },
+  (t) => [
+    primaryKey({ columns: [t.examId, t.position] }),
+    check("exam_sections_rule_ck", sql`(${t.ruleType} = 'answer_all' and ${t.ruleCount} is null) or (${t.ruleType} = 'answer_any' and ${t.ruleCount} >= 1)`),
+  ],
+);
+
+export const examItems = pgTable(
+  "exam_items",
+  {
+    examId: uuid("exam_id").notNull().references(() => exams.id, { onDelete: "cascade" }),
+    /** Number across the whole exam (0-based). */
+    position: integer("position").notNull(),
+    sectionPosition: integer("section_position").notNull(),
+    questionId: uuid("question_id").notNull().references(() => questions.id, { onDelete: "restrict" }),
+    questionVersion: integer("question_version").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.examId, t.position] })],
+);
+
+/** One scheduled run of an exam for a school or class, with an opening and closing time. */
+export const examSittings = pgTable(
+  "exam_sittings",
+  {
+    id: id(),
+    institutionId: uuid("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+    examId: uuid("exam_id").notNull().references(() => exams.id, { onDelete: "restrict" }),
+    classId: uuid("class_id").references(() => classes.id, { onDelete: "set null" }),
+    title: text("title").notNull(),
+    instructions: text("instructions"),
+    durationMinutes: integer("duration_minutes").notNull(),
+    shuffleOptions: boolean("shuffle_options").notNull(),
+    opensAt: timestamp("opens_at", { withTimezone: true }).notNull(),
+    closesAt: timestamp("closes_at", { withTimezone: true }).notNull(),
+    status: text("status").notNull().default("scheduled"),
+    /** Until a teacher releases results, candidates see only that they submitted. */
+    resultsReleasedAt: timestamp("results_released_at", { withTimezone: true }),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("exam_sittings_inst_idx").on(t.institutionId, t.opensAt),
+    check("exam_sittings_status_ck", sql`${t.status} in ('scheduled','cancelled')`),
+    check("exam_sittings_window_ck", sql`${t.closesAt} > ${t.opensAt}`),
+  ],
+);
+
+export const sittingSections = pgTable(
+  "sitting_sections",
+  {
+    sittingId: uuid("sitting_id").notNull().references(() => examSittings.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    title: text("title").notNull(),
+    instructions: text("instructions"),
+    ruleType: text("rule_type").notNull(),
+    ruleCount: integer("rule_count"),
+  },
+  (t) => [primaryKey({ columns: [t.sittingId, t.position] })],
+);
+
+/** Frozen copy of each question (content, key, marks) as it was when the exam was scheduled. */
+export const sittingItems = pgTable(
+  "sitting_items",
+  {
+    sittingId: uuid("sitting_id").notNull().references(() => examSittings.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    sectionPosition: integer("section_position").notNull(),
+    questionId: uuid("question_id").notNull(),
+    questionVersion: integer("question_version").notNull(),
+    type: text("type").notNull(),
+    stem: text("stem").notNull(),
+    explanation: text("explanation"),
+    marks: doublePrecision("marks").notNull(),
+    content: jsonb("content").$type<Record<string, unknown>>().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.sittingId, t.position] })],
+);
+
+/** One candidate's attempt. The deadline is set by the server when they start and only a recorded, audited extension moves it. */
+export const examSessions = pgTable(
+  "exam_sessions",
+  {
+    id: id(),
+    sittingId: uuid("sitting_id").notNull().references(() => examSittings.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    deadlineAt: timestamp("deadline_at", { withTimezone: true }).notNull(),
+    extensionMinutes: integer("extension_minutes").notNull().default(0),
+    status: text("status").notNull().default("in_progress"),
+    /** null until submitted; then pending -> marked. Marking never runs inside the submit transaction. */
+    markingStatus: text("marking_status"),
+  },
+  (t) => [
+    uniqueIndex("exam_sessions_sitting_user_uq").on(t.sittingId, t.userId),
+    index("exam_sessions_due_idx").on(t.status, t.deadlineAt),
+    index("exam_sessions_marking_idx").on(t.markingStatus),
+    check("exam_sessions_status_ck", sql`${t.status} in ('in_progress','submitted')`),
+    check("exam_sessions_marking_ck", sql`${t.markingStatus} is null or ${t.markingStatus} in ('pending','marked')`),
+  ],
+);
+
+/** The candidate's CURRENT answer per item. `seq` only ever goes up, so a late, out-of-order save can't overwrite a newer one. */
+export const examResponses = pgTable(
+  "exam_responses",
+  {
+    sessionId: uuid("session_id").notNull().references(() => examSessions.id, { onDelete: "cascade" }),
+    itemPosition: integer("item_position").notNull(),
+    seq: integer("seq").notNull(),
+    answer: jsonb("answer").$type<unknown>(),
+    savedAt: timestamp("saved_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.sessionId, t.itemPosition] })],
+);
+
+/** Every accepted change, kept (insert-only by the application). */
+export const examResponseVersions = pgTable(
+  "exam_response_versions",
+  {
+    sessionId: uuid("session_id").notNull().references(() => examSessions.id, { onDelete: "cascade" }),
+    itemPosition: integer("item_position").notNull(),
+    seq: integer("seq").notNull(),
+    answer: jsonb("answer").$type<unknown>(),
+    savedAt: timestamp("saved_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.sessionId, t.itemPosition, t.seq] })],
+);
+
+/** One per session (primary key), so a second submit can only ever return the first receipt. */
+export const examSubmissions = pgTable(
+  "exam_submissions",
+  {
+    sessionId: uuid("session_id").primaryKey().references(() => examSessions.id, { onDelete: "cascade" }),
+    receipt: text("receipt").notNull(),
+    /** SHA-256 of the final answers, so a receipt can be checked against what was actually stored. */
+    contentHash: text("content_hash").notNull(),
+    kind: text("kind").notNull(),
+    answeredCount: integer("answered_count").notNull(),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("exam_submissions_receipt_uq").on(t.receipt), check("exam_submissions_kind_ck", sql`${t.kind} in ('student','auto')`)],
+);
+
+/** Marks awarded per item. Only deterministic ("auto") marks exist so far; essays have no row until a person marks them. */
+export const examMarks = pgTable(
+  "exam_marks",
+  {
+    sessionId: uuid("session_id").notNull().references(() => examSessions.id, { onDelete: "cascade" }),
+    itemPosition: integer("item_position").notNull(),
+    awarded: doublePrecision("awarded").notNull(),
+    maxMarks: doublePrecision("max_marks").notNull(),
+    method: text("method").notNull().default("auto"),
+    markedAt: timestamp("marked_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.sessionId, t.itemPosition] }),
+    check("exam_marks_range_ck", sql`${t.awarded} >= 0 and ${t.awarded} <= ${t.maxMarks}`),
+    check("exam_marks_method_ck", sql`${t.method} in ('auto','manual')`),
+  ],
+);
+
+export type ExamSitting = typeof examSittings.$inferSelect;
+export type ExamSession = typeof examSessions.$inferSelect;
+
 /* ------------------------------------------------------------ audit/settings */
 
 /**

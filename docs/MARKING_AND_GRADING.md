@@ -1,6 +1,11 @@
-# Marking and grading — DESIGN INTENT, NOT IMPLEMENTED
+# Marking and grading — partly built
 
-Nothing here exists in code. Decisions for Phase 6.
+**Built (Phases 4–5):** deterministic objective marking for mcq, true/false and short answer (exact match after trimming, lower-casing and
+collapsing spaces; no partial credit, no negative marking, no tolerance rules) in quizzes and exams, run after an exam submission is stored;
+best-`n` selection for `answer_any` sections; results hidden until released. See [EXAMINATION_ENGINE.md](EXAMINATION_ENGINE.md).
+
+**Not built:** everything below — rubric marking of essays (manual or AI), moderation, grade boundaries, math equivalence, OCR. Essays are saved
+and show as waiting for a marker. The rest of this file is design intent for Phase 6.
 
 ## Objective marking
 Deterministic code against approved answer keys — no AI. Rules as data per question: exact match, accepted alternatives,

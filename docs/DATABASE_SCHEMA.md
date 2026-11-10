@@ -41,6 +41,19 @@ erDiagram
 | `session_participants` | one per student per session; shuffled `question_order`, current index, `question_served_at` (server clock), running totals |
 | `session_answers` | PK `(participant_id, idx)`: one row per answered question; makes retries idempotent |
 
+## Exams (migration 0004)
+
+| Table | Purpose |
+|---|---|
+| `exams`, `exam_sections`, `exam_items` | a reusable structure; items pin a `question_version`; CHECK refuses `official_verified` without `source_spec` |
+| `exam_sittings` | a scheduled run for a school/class: window (`closes_at > opens_at` enforced), snapshot of title/duration/options, `results_released_at` |
+| `sitting_sections`, `sitting_items` | frozen copies (content, key, marks) served to candidates |
+| `exam_sessions` | one attempt per candidate (unique `(sitting_id, user_id)`); `deadline_at` set by the server; `marking_status` pending → marked |
+| `exam_responses` | current answer per item with `seq` |
+| `exam_response_versions` | every accepted change (insert-only by convention; **no DB trigger enforces this**) |
+| `exam_submissions` | PK = session, so one submission per attempt; receipt (unique) and SHA-256 of final answers |
+| `exam_marks` | per-item marks; only `auto` marks exist today |
+
 ## Audit immutability
 
 `drizzle/0001_audit_immutable.sql` installs triggers that raise an error on UPDATE, DELETE and TRUNCATE of

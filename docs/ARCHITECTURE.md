@@ -50,9 +50,16 @@ never against a client-supplied one. Details and tests: [AUTHENTICATION_AND_PERM
 - `LiveHub` (WebSocket at `/api/v1/sessions/:id/live`) pushes role-filtered leaderboard/status events, batched every 400 ms, using Redis
   pub/sub across instances. The leaderboard is a Redis sorted set rebuilt from PostgreSQL if lost.
 
+## Timed exams (Phase 5)
+
+Teachers build an exam (sections with `answer_all`/`answer_any n` rules, pinned question versions) and **schedule a sitting**, which freezes
+the questions. Candidates start within the window; the **server sets and owns the deadline**, saves answers with sequence numbers, and
+submits idempotently with a receipt. `ExamEngine` (`apps/api/src/exam/engine.ts`) holds all of it; a sweeper auto-submits expired attempts and
+finishes marking. See [EXAMINATION_ENGINE.md](EXAMINATION_ENGINE.md).
+
 ## Not yet built (design intent only)
 
-Exam engine, essay/AI marking, results, notifications, reports, file uploads. (Question bank, AI layer, quizzes and the live leaderboard are built.)
+Essay/AI marking, analytics, notifications, reports, file uploads, official-style templates. (Question bank, AI layer, quizzes, the live leaderboard and the exam engine are built.)
 Their intended designs are in [AI_SYSTEM_DESIGN.md](AI_SYSTEM_DESIGN.md), [EXAMINATION_ENGINE.md](EXAMINATION_ENGINE.md),
 [MARKING_AND_GRADING.md](MARKING_AND_GRADING.md) and [SCALABILITY_AND_PERFORMANCE.md](SCALABILITY_AND_PERFORMANCE.md).
 

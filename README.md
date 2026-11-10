@@ -2,17 +2,17 @@
 
 AI-powered assessment and examination platform for The Modern Pedagogues (TMP).
 
-> **Status: Phases 1, 3 and 4.** Accounts, permissions, schools, classes, the audit log, the **question bank**, the
-> **AI Question Studio**, and **quizzes with join codes and a live leaderboard** work and are tested (132 tests). The AI Studio has
-> been tested against a simulated provider only; the live OpenAI call has not been run yet. The leaderboard has not been
-> load-tested, so no capacity is claimed. The BECE/WASSCE exam engine and essay/AI marking are **not built yet**. See [IMPLEMENTATION_ROADMAP.md](docs/IMPLEMENTATION_ROADMAP.md) and
+> **Status: Phases 1, 3, 4 and 5.** Accounts, permissions, schools, classes, the audit log, the **question bank**, the
+> **AI Question Studio**, **quizzes with join codes and a live leaderboard**, and a **timed exam engine** (sectioned exams, server-owned deadlines, saved answers, auto-submit, objective marking) work and are tested (165 tests). The AI Studio has
+> been tested against a simulated provider only; the live OpenAI call has not been run yet. Neither the leaderboard nor the exam engine has been
+> load-tested, so no capacity is claimed. Essay marking (manual or AI), official-style BECE/WASSCE templates and results analytics are **not built yet**; essays are saved but unmarked. See [IMPLEMENTATION_ROADMAP.md](docs/IMPLEMENTATION_ROADMAP.md) and
 > [KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md). Nothing is deployed.
 
 ## Layout
 
 ```
 apps/api         Fastify + TypeScript API, Drizzle ORM, PostgreSQL migrations, tests
-apps/web         Next.js web app (sign-in, role-aware shell, schools, users, audit log, question bank, AI Studio, quizzes, live host screen, join and play, roadmap)
+apps/web         Next.js web app (sign-in, role-aware shell, schools, users, audit log, question bank, AI Studio, quizzes, live host screen, join and play, exams, exam room, roadmap)
 packages/shared  Roles, permissions and validation schemas shared by both apps
 docs/            Architecture, schema, API, security, deployment, testing
 ```

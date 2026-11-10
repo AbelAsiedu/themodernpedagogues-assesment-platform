@@ -46,6 +46,11 @@ export function Pill({ value }: { value: string }) {
   return <span className={`pill ${tone[value] ?? "plain"}`}>{value}</span>;
 }
 
+/** A status label with a tone, showing exactly the words given. */
+export function Tag({ tone, children }: { tone: "ok" | "wait" | "bad" | "plain"; children: ReactNode }) {
+  return <span className={`pill ${tone}`}>{children}</span>;
+}
+
 export function PageHead({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <header className="page-head">

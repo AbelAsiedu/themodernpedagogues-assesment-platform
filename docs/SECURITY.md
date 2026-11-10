@@ -38,6 +38,21 @@ Two deliberate breaks of `can()` (ignore institution scope; allow delegating sup
 **Not covered:** no load/abuse test of the hub; display names are student-chosen (regex-limited, no profanity filter); a student can share the
 code with someone in the same school; there is no proctoring and none is claimed.
 
+## Exams (Phase 5) — what is protected and tested
+
+| Concern | Control | Evidence |
+|---|---|---|
+| Candidate seeing the key or another's work | candidate view built by `publicQuestion`; attempts are readable/writable only by their owner (everyone else, including staff, gets 404) | route tests |
+| Changing the deadline | set on the server at start; only an audited staff extension (reason required) moves it; clients cannot send a time | tests |
+| Changing answers after submission | save takes a shared lock, submit an exclusive one; receipt hash must equal stored answers | deterministic lock-ordering test + racing test + mutation checks |
+| Replay / out-of-order saves | `seq` guard in the upsert | tests + mutation check |
+| Double submit | exclusive lock + PK on `exam_submissions` | concurrent-submit test |
+| Early results / key disclosure | results hidden until a teacher releases them after close; released output never includes keys or explanations | tests |
+| Other schools / classes | sittings invisible (404) outside the school or class | tests |
+| Mislabelled auto-submit | client "time up" flag only trusted when the server clock agrees | test |
+
+**Not covered:** no proctoring, tab-switch or device checks (none are claimed); local-storage backup of unsent answers is readable by anyone using the same browser profile; no load/abuse testing.
+
 ## NOT done — do before real student data
 
 - **Separate DB roles.** The app currently connects as the table owner, who can drop the audit trigger. Use a

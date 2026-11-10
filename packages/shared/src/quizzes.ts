@@ -2,7 +2,7 @@ import { z } from "zod";
 
 /** Quizzes and live sessions: vocabulary shared by the API (which enforces it) and the web app. */
 
-/** No 0/O/1/I/L so codes can be read aloud and typed from a board. 32^6 ≈ 1.07 billion codes. */
+/** No 0/O/1/I/L so codes can be read aloud and typed from a board. 31^6 ≈ 888 million codes. */
 export const JOIN_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 export const JOIN_CODE_LENGTH = 6;
 export const normaliseJoinCode = (raw: string) => raw.toUpperCase().replace(/[^A-Z0-9]/g, "");

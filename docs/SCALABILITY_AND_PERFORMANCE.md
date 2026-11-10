@@ -22,7 +22,12 @@ simultaneous candidates it can support.** The targets in the brief (100–500 �
 - **Fallback:** if WebSockets are unavailable the client polls every 3 s.
 - **Known cost:** each finished player's rank refresh is one HTTP request per few seconds (debounced); a busy 200+ room will make this the first thing to measure.
 
+## Built in Phase 5 (correct, not yet measured)
+- **Exam saves:** one short transaction per save (share-lock on the attempt row, upsert of the current answer guarded by `seq`, insert of a version row). No hot shared row is written; saves from different candidates never touch the same rows. Candidates' browsers debounce typing (~0.7 s) and send choices immediately; the save endpoint is limited to 600/min per user.
+- **Submit:** one transaction holding an exclusive row lock, hashing the candidate's own answers. Marking is outside it and is retried by the sweeper.
+- **Sweeper:** one indexed query for due attempts and one for pending marking, every 15 s per instance; safe to run on several instances (submit and marking are idempotent).
+- **Known costs to measure first:** the control room's progress query (grouped over all responses of a sitting) every 5 s per open control room; `result()` is computed on demand per candidate (several small queries) when the teacher opens the marks table, so a sitting with hundreds of candidates will make that page slow; `exam_response_versions` grows with every accepted change.
+
 ## Planned for later phases (not built)
-- **Answer saving for exams:** small idempotent writes, append-only versions, write path separated from marking.
 - **Queues:** BullMQ workers for marking, AI jobs, exports.
-- **Load tests (none run yet, including for quizzes):** scripted scenarios for login, join, quiz answering with a live board, exam start, answer saving, simultaneous submit — run at each staged target, with results recorded here.
+- **Load tests (none run yet, including for quizzes and exams):** scripted scenarios for login, join, quiz answering with a live board, exam start, answer saving, simultaneous submit — run at each staged target, with results recorded here.

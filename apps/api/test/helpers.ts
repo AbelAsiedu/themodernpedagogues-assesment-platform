@@ -49,7 +49,7 @@ export async function startTestEnv(opts: { ai?: AiProvider; redis?: Redis; env?:
 /** Log in and return a client that sends the session cookie and a valid Origin on every call. */
 type Res = Awaited<ReturnType<FastifyInstance["inject"]>>;
 export interface TestClient {
-  call(method: "GET" | "POST" | "PATCH" | "DELETE", url: string, payload?: unknown, headers?: Record<string, string>): Promise<Res>;
+  call(method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE", url: string, payload?: unknown, headers?: Record<string, string>): Promise<Res>;
   cookie: string;
 }
 
@@ -59,7 +59,7 @@ export async function login(app: FastifyInstance, email: string, password = PASS
   const setCookie = res.cookies.find((c) => c.name === "tmp_session");
   if (!setCookie) throw new Error("no session cookie");
   const cookie = `${setCookie.name}=${setCookie.value}`;
-  const call = (method: "GET" | "POST" | "PATCH" | "DELETE", url: string, payload?: unknown, headers: Record<string, string> = {}) =>
+  const call = (method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE", url: string, payload?: unknown, headers: Record<string, string> = {}) =>
     app.inject({
       method,
       url: `/api/v1${url}`,
@@ -73,7 +73,7 @@ export async function login(app: FastifyInstance, email: string, password = PASS
 export async function clientFor(env: TestEnv, userId: string): Promise<TestClient> {
   const { token } = await createSession(env.db, userId, 12, {});
   const cookie = `tmp_session=${token}`;
-  const call = (method: "GET" | "POST" | "PATCH" | "DELETE", url: string, payload?: unknown, headers: Record<string, string> = {}) =>
+  const call = (method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE", url: string, payload?: unknown, headers: Record<string, string> = {}) =>
     env.app.inject({ method, url: `/api/v1${url}`, payload: payload as object | undefined, headers: { cookie, origin: ORIGIN, ...headers } });
   return { call, cookie };
 }

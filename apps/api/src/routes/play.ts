@@ -7,16 +7,13 @@ import type { Actor } from "../authz/can.js";
 import { classMembers, quizSessions, sessionParticipants, sessionQuestions } from "../db/schema.js";
 import { HttpError, forbidden, notFound, parse } from "../errors.js";
 import { can } from "../authz/can.js";
+import { isStudentOf } from "../authz/student.js";
 import { shuffled } from "../quiz/order.js";
 import { LiveHub } from "../quiz/hub.js";
 import { effectiveStatus, getPlayState, submitAnswer } from "../quiz/play.js";
 
 const idParam = z.object({ id: z.string().uuid() });
 const MAX_PARTICIPANTS = 2000;
-
-/** Students are people with an ACTIVE student membership in an ACTIVE school. Platform staff don't play. */
-const isStudentOf = (actor: Actor, institutionId: string) =>
-  actor.memberships.some((m) => m.institutionId === institutionId && m.role === "student" && m.membershipStatus === "active" && m.institutionStatus === "active");
 
 const defaultName = (full: string) => {
   const parts = full.trim().split(/\s+/);
