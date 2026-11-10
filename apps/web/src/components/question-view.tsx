@@ -41,6 +41,7 @@ export function QuestionView({ q }: { q: Question }) {
       <p className="qmeta">
         {QUESTION_TYPE_LABEL[q.type]} · {q.difficulty} · {q.marks} {q.marks === 1 ? "mark" : "marks"}
         {q.source === "ai" && <> · <Pill value="AI draft" /></>}
+        {q.source === "import" && <> · <Pill value="Imported" /></>}
       </p>
     </div>
   );

@@ -18,6 +18,10 @@ const schema = z.object({
   AI_TIMEOUT_MS: z.coerce.number().int().positive().default(60_000),
   AI_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(10),
   AI_DAILY_LIMIT_PER_USER: z.coerce.number().int().positive().default(30),
+  // Uploads. OCR needs the `tesseract` and `pdftoppm` programs on the server; with them missing it is simply reported as unavailable.
+  OCR_ENABLED: z.enum(["true", "false"]).default("true").transform((v) => v === "true"),
+  UPLOAD_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(20),
+  OCR_LANG: z.string().regex(/^[a-z_+]{3,20}$/).default("eng"),
   // Per-IP limits. Defaults are production-safe; tests raise them to avoid throttling themselves.
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
   LOGIN_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),

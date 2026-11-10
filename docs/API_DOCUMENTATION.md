@@ -78,6 +78,17 @@ Status codes: 401 not signed in · 403 not allowed · 404 not found (platform st
 | POST `/exam-sessions/:id/submit` | the candidate only | idempotent; returns the receipt; optional `{timeUp:true}` |
 | GET `/exam-sessions/:id/result` | the candidate only | receipt only until released; then marks, never the key |
 
+### Files (Phase 3b) — see [FILE_IMPORT.md](FILE_IMPORT.md)
+| Route | Permission | Notes |
+|---|---|---|
+| GET `/institutions/:id/uploads/capabilities` | questions.write (scope) | `{maxBytes, kinds, ocr}` |
+| GET `/institutions/:id/uploads` | questions.write (scope) | summaries; never the file or full text |
+| POST `/institutions/:id/uploads` | questions.write (scope) | multipart: one `file` + `confirmRights=true`. 201 new, 200 `reused:true` for an identical file; 400 no rights, 413 too large, 422 `upload_unsupported/legacy_format/unreadable/no_text/too_large` with a plain message. 20/min per user |
+| GET `/uploads/:id[?subjectId=]` | questions.write (its institution) | text-section previews and the full parsed question table; with `subjectId`, rows already in the bank are flagged `duplicate` |
+| POST `/uploads/:id/import-questions` | questions.write; + `questions.review` if `approve`; + `quizzes.manage` if `quiz` | `{subjectId, topicId, difficulty, rows?, approve, quiz?}` → 201 `{imported, status, skipped[], quiz}`; 409 if nothing importable |
+| DELETE `/uploads/:id` | questions.write (its institution) | 204; imported questions stay |
+| POST `/institutions/:id/ai/generate-questions` | ai.generate | now also accepts `uploadId` + `sectionIds` (server reads the text; foreign upload or unknown section → 400; over 12,000 chars → 400) |
+
 No OpenAPI document is generated yet; this file is maintained by hand.
 
 Rate limits: 300 requests/min globally (per signed-in user, or per IP when anonymous, so a classroom behind one school IP is not throttled together); 20 logins/15 min/IP (`RATE_LIMIT_MAX`, `LOGIN_RATE_LIMIT_MAX`).

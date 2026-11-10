@@ -1,11 +1,11 @@
 import { and, desc, eq, gt, sql } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { generateQuestionsSchema } from "@tmp/shared";
+import { MAX_SOURCE_TEXT, generateQuestionsSchema } from "@tmp/shared";
 import { PROMPT_VERSION, generateQuestions, normaliseStem } from "../ai/questionGen.js";
 import { AiProviderError } from "../ai/provider.js";
 import { audit } from "../audit.js";
-import { aiGenerations, questionVersions, questions, subjects, topics } from "../db/schema.js";
+import { aiGenerations, questionVersions, questions, subjects, topics, uploads } from "../db/schema.js";
 import { HttpError, badRequest, parse } from "../errors.js";
 import { assertSubjectTopic, snapshotOf } from "./questions.js";
 
@@ -55,9 +55,27 @@ export async function aiRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const { id } = parse(idParam, req.params);
       const actor = app.authorize(req, "ai.generate", { institutionId: id });
-      const input = parse(generateQuestionsSchema, req.body);
+      const parsedInput = parse(generateQuestionsSchema, req.body);
       if (!ai) throw new HttpError(503, "ai_not_configured", "AI generation isn't set up on this server yet");
-      await assertSubjectTopic(db, id, input.subjectId, input.topicId);
+      await assertSubjectTopic(db, id, parsedInput.subjectId, parsedInput.topicId);
+
+      // Grounding from an uploaded file: the SERVER reads the chosen sections (the browser only names them), and only from a file
+      // that belongs to this school. Selection is capped at the same 12,000 characters as pasted notes; nothing is silently cut.
+      let input = parsedInput;
+      let uploadId: string | null = null;
+      if (parsedInput.uploadId) {
+        app.authorize(req, "questions.write", { institutionId: id });
+        const [up] = await db.select().from(uploads).where(and(eq(uploads.id, parsedInput.uploadId), eq(uploads.institutionId, id))).limit(1);
+        if (!up) throw badRequest("That file isn't in this school");
+        const wanted = new Set(parsedInput.sectionIds ?? []);
+        if (!wanted.size) throw badRequest("Choose at least one part of the file to use");
+        const picked = up.sections.filter((sec) => wanted.has(sec.id));
+        if (picked.length !== wanted.size) throw badRequest("One of the chosen parts of the file no longer exists");
+        const text = [...picked.map((sec) => sec.text), ...(parsedInput.sourceText ? [parsedInput.sourceText] : [])].join("\n\n");
+        if (text.length > MAX_SOURCE_TEXT) throw badRequest(`The chosen parts total ${text.length.toLocaleString("en-GH")} characters. Choose fewer parts (the limit is ${MAX_SOURCE_TEXT.toLocaleString("en-GH")}).`);
+        input = { ...parsedInput, sourceText: text };
+        uploadId = up.id;
+      }
 
       // Per-user daily quota, counted from the generation log (failed attempts count too, so errors can't be spammed).
       const since = new Date(Date.now() - 24 * 3600 * 1000);
@@ -83,6 +101,7 @@ export async function aiRoutes(app: FastifyInstance) {
         type: input.type, count: input.count, difficulty: input.difficulty, level: input.level,
         subjectId: input.subjectId, topicId: input.topicId,
         sourceTextChars: input.sourceText?.length ?? 0, hasFocus: !!input.focus,
+        ...(uploadId ? { uploadId, sectionIds: parsedInput.sectionIds } : {}),
       };
       const started = Date.now();
       let outcome;
@@ -118,7 +137,7 @@ export async function aiRoutes(app: FastifyInstance) {
             .values({
               institutionId: id, subjectId: q.subjectId, topicId: q.topicId, type: q.type, stem: q.stem,
               explanation: q.explanation, difficulty: q.difficulty, marks: q.marks, content: q.content,
-              status: "needs_review", source: "ai", aiGenerationId: gen!.id, createdBy: actor.id,
+              status: "needs_review", source: "ai", aiGenerationId: gen!.id, uploadId, createdBy: actor.id,
             })
             .returning();
           await tx.insert(questionVersions).values({ questionId: row!.id, version: 1, snapshot: snapshotOf(row!), changedBy: actor.id });

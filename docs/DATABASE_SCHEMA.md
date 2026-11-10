@@ -54,6 +54,10 @@ erDiagram
 | `exam_submissions` | PK = session, so one submission per attempt; receipt (unique) and SHA-256 of final answers |
 | `exam_marks` | per-item marks; only `auto` marks exist today |
 
+## File uploads (migration 0005)
+- `uploads` — id, institution_id, uploaded_by, filename (display only), kind (CHECK xlsx/docx/pptx/pdf/csv/txt/image), size_bytes, sha256, `sections` jsonb (extracted text), char_count, `question_table` jsonb (parsed rows or null), warnings jsonb, rights_confirmed_at, created_at. Unique `(institution_id, sha256)`. The original file is **not** stored.
+- `questions.upload_id` (FK, set null on delete) records where imported or AI-grounded questions came from; `questions.source` now allows `'import'`.
+
 ## Audit immutability
 
 `drizzle/0001_audit_immutable.sql` installs triggers that raise an error on UPDATE, DELETE and TRUNCATE of

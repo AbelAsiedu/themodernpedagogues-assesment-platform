@@ -25,6 +25,9 @@ import { examRoutes } from "./routes/exams.js";
 import { examPlayRoutes } from "./routes/examPlay.js";
 import { ExamEngine } from "./exam/engine.js";
 import websocket from "@fastify/websocket";
+import multipart from "@fastify/multipart";
+import { MAX_UPLOAD_BYTES } from "@tmp/shared";
+import { uploadRoutes } from "./routes/uploads.js";
 import { Leaderboard } from "./quiz/leaderboard.js";
 import { LiveHub } from "./quiz/hub.js";
 import type { AiProvider } from "./ai/provider.js";
@@ -86,6 +89,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await app.register(cors, { origin: config.webOrigins, credentials: true });
   await app.register(cookie);
   await app.register(websocket, { options: { maxPayload: 1024 } });
+  // One file per request, capped in size; the file is read into memory (it is small) and never written to disk.
+  await app.register(multipart, { limits: { fileSize: MAX_UPLOAD_BYTES, files: 1, fields: 4, parts: 6, fieldSize: 64 } });
   await app.register(rateLimit, {
     global: true,
     // Count per signed-in user, not per IP: a whole classroom shares one school IP address, and must not throttle itself.
@@ -176,6 +181,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       await v1.register(adminRoutes);
       await v1.register(questionRoutes);
       await v1.register(aiRoutes);
+      await v1.register(uploadRoutes);
       await v1.register(quizRoutes);
       await v1.register(playRoutes);
       await v1.register(liveRoutes);

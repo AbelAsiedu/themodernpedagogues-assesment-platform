@@ -31,6 +31,19 @@ export async function api<T = unknown>(path: string, opts: { method?: string; bo
   return json as T;
 }
 
+/** Send a file (multipart). The browser sets the content type, including the boundary. */
+export async function apiUpload<T = unknown>(path: string, form: FormData): Promise<T> {
+  const res = await fetch(`/api/v1${path}`, { method: "POST", credentials: "same-origin", headers: { "x-tmp-client": "web" }, body: form });
+  const text = await res.text();
+  let json: { error?: { code?: string; message?: string; details?: { path: string; message: string }[] } } | null = null;
+  try { json = text ? JSON.parse(text) : null; } catch { /* a proxy error page is not JSON */ }
+  if (!res.ok) {
+    const e = json?.error;
+    throw new ApiError(res.status, e?.code ?? "error", e?.message ?? (res.status === 413 ? "That file is too large." : "The upload failed"), e?.details);
+  }
+  return json as T;
+}
+
 /** Plain-language message for an error, including field-level validation problems. */
 export function describeError(err: unknown): string {
   if (err instanceof ApiError) {

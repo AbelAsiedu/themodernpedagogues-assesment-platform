@@ -207,6 +207,45 @@ export const aiGenerations = pgTable(
   ],
 );
 
+/**
+ * A file a teacher uploaded as source material. Only the EXTRACTED text and any parsed question table are kept;
+ * the original file is not stored. Deleting a row deletes that text.
+ */
+export interface StoredSection { id: string; label: string; text: string; ocr: boolean }
+export interface StoredParsedQuestion {
+  /** Item number, unique within the upload (what the import request refers to). */
+  row: number; /** Row in the sheet it came from. */ sourceRow: number; sheet: string | null; type: string; stem: string; options: string[]; correctIndex: number | null; correctBool: boolean | null;
+  accepted: string[]; explanation: string | null; marks: number | null; difficulty: string | null; timeSec: number | null;
+  problems: string[]; notes: string[];
+}
+export interface StoredQuestionTable { layout: string; items: StoredParsedQuestion[]; suggestedTimeSec: number | null; truncated: boolean }
+
+export const uploads = pgTable(
+  "uploads",
+  {
+    id: id(),
+    institutionId: uuid("institution_id").notNull().references(() => institutions.id, { onDelete: "cascade" }),
+    uploadedBy: uuid("uploaded_by").references(() => users.id, { onDelete: "set null" }),
+    /** For display only. Never used as a path. */
+    filename: text("filename").notNull(),
+    kind: text("kind").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    sha256: text("sha256").notNull(),
+    sections: jsonb("sections").$type<StoredSection[]>().notNull(),
+    charCount: integer("char_count").notNull(),
+    questionTable: jsonb("question_table").$type<StoredQuestionTable>(),
+    warnings: jsonb("warnings").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    /** The uploader confirmed they wrote this material or have permission to use it. */
+    rightsConfirmedAt: timestamp("rights_confirmed_at", { withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("uploads_inst_time_idx").on(t.institutionId, t.createdAt),
+    uniqueIndex("uploads_inst_sha_uq").on(t.institutionId, t.sha256),
+    check("uploads_kind_ck", sql`${t.kind} in ('xlsx','docx','pptx','pdf','csv','txt','image')`),
+  ],
+);
+
 export const questions = pgTable(
   "questions",
   {
@@ -224,6 +263,8 @@ export const questions = pgTable(
     status: text("status").notNull().default("draft"),
     source: text("source").notNull().default("manual"),
     aiGenerationId: uuid("ai_generation_id").references(() => aiGenerations.id, { onDelete: "set null" }),
+    /** The uploaded file this question was imported or generated from, if any. */
+    uploadId: uuid("upload_id").references(() => uploads.id, { onDelete: "set null" }),
     version: integer("version").notNull().default(1),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
     reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }),
@@ -239,7 +280,7 @@ export const questions = pgTable(
     check("questions_type_ck", sql`${t.type} in ('mcq','true_false','short_answer','essay')`),
     check("questions_difficulty_ck", sql`${t.difficulty} in ('easy','medium','hard')`),
     check("questions_status_ck", sql`${t.status} in ('draft','needs_review','approved','rejected','archived')`),
-    check("questions_source_ck", sql`${t.source} in ('manual','ai')`),
+    check("questions_source_ck", sql`${t.source} in ('manual','ai','import')`),
     check("questions_marks_ck", sql`${t.marks} > 0`),
     // The database itself refuses to hold an AI-written question that skipped human review.
     check("questions_ai_reviewed_ck", sql`${t.source} <> 'ai' or ${t.status} not in ('approved') or ${t.reviewedBy} is not null`),
@@ -633,6 +674,7 @@ export type User = typeof users.$inferSelect;
 export type Institution = typeof institutions.$inferSelect;
 export type Membership = typeof memberships.$inferSelect;
 export type Question = typeof questions.$inferSelect;
+export type Upload = typeof uploads.$inferSelect;
 export type Subject = typeof subjects.$inferSelect;
 export type QuizSession = typeof quizSessions.$inferSelect;
 export type Participant = typeof sessionParticipants.$inferSelect;

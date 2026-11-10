@@ -28,7 +28,7 @@ export type Difficulty = (typeof DIFFICULTIES)[number];
 export const QUESTION_STATUSES = ["draft", "needs_review", "approved", "rejected", "archived"] as const;
 export type QuestionStatus = (typeof QUESTION_STATUSES)[number];
 
-export const QUESTION_SOURCES = ["manual", "ai"] as const;
+export const QUESTION_SOURCES = ["manual", "ai", "import"] as const;
 export type QuestionSource = (typeof QUESTION_SOURCES)[number];
 
 const text = (max: number) => z.string().trim().min(1).max(max);
@@ -154,5 +154,8 @@ export const generateQuestionsSchema = z.object({
   sourceText: z.string().trim().max(MAX_SOURCE_TEXT).optional(),
   /** Optional extra instruction, e.g. "focus on causes of ethnic conflict". */
   focus: z.string().trim().max(300).optional(),
+  /** Ground the questions in sections of a file the teacher uploaded (the server reads the text; it is never sent by the browser). */
+  uploadId: z.string().uuid().optional(),
+  sectionIds: z.array(z.string().max(20)).max(60).optional(),
 });
 export type GenerateQuestionsInput = z.infer<typeof generateQuestionsSchema>;

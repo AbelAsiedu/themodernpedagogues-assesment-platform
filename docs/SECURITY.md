@@ -53,6 +53,25 @@ code with someone in the same school; there is no proctoring and none is claimed
 
 **Not covered:** no proctoring, tab-switch or device checks (none are claimed); local-storage backup of unsent answers is readable by anyone using the same browser profile; no load/abuse testing.
 
+## File uploads (Phase 3b) — what is protected and tested
+Details in [FILE_IMPORT.md](FILE_IMPORT.md).
+
+| Concern | Control | Evidence |
+|---|---|---|
+| Disguised files | type decided from content (magic bytes + zip entries), never name or claimed type; legacy OLE, executables, archives and binary-as-text refused | tests |
+| Zip bombs | per-part 25 MB and total 60 MB budgets, 2,000 parts max, checked from the zip directory before inflating; fflate truncates at the declared size, so lying headers cannot over-allocate | tests (one huge part; many parts adding up) |
+| CPU exhaustion from malformed XML | no XML parser; linear `indexOf` scans only (earlier lazy-regex scans could go quadratic and were replaced) | test with 150,000 unclosed tags finishes in well under 1.5 s |
+| XXE / entity expansion | no XML parser; only five named and numeric entities are decoded | by design |
+| Command injection via OCR | `execFile` with argument arrays, no shell; temp dir 0700, removed in `finally`; file names never used in paths; 60 s timeout; 2 concurrent jobs | code review, OCR test |
+| Image bombs | PNG/JPEG header dimensions checked (16 MP max) before OCR | test |
+| Cross-school access | uploads authorised against their own institution, non-disclosing 403; AI route reads only the caller's school's uploads and sends only the chosen sections | tests + mutation checks |
+| Prompt injection from file text | text is fenced as untrusted data in the AI prompt; output is always `needs_review` | test |
+| Silent truncation | selections over 12,000 characters are refused | test |
+| Abuse | 5 MB limit, 1 file/request, 20 uploads/min/user, audited | tests |
+| Copyright | teacher must tick a confirmation, stored with a timestamp and audited. **This is a record, not verification** | test |
+
+**Not covered:** no virus scanning (files are parsed, never executed or stored); the original file is not retained, so there is nothing to re-scan.
+
 ## NOT done — do before real student data
 
 - **Separate DB roles.** The app currently connects as the table owner, who can drop the audit trigger. Use a

@@ -10,7 +10,7 @@ export interface McqContent { options: { id: string; text: string }[]; correctOp
 export interface Question {
   id: string; institutionId: string; subjectId: string; topicId: string | null;
   type: QuestionType; stem: string; explanation: string | null; difficulty: string; marks: number;
-  content: Record<string, unknown>; status: string; source: "manual" | "ai"; version: number;
+  content: Record<string, unknown>; status: string; source: "manual" | "ai" | "import"; version: number;
   createdBy: string | null; reviewedBy: string | null; reviewedAt: string | null; reviewNote: string | null;
   updatedAt: string;
 }

@@ -12,7 +12,7 @@ export interface NavItem {
  * rather than as links that go nowhere.
  */
 /** True if the person holds the permission platform-wide or in at least one active school. */
-function hasQuestionAccess(me: Me, permission: "questions.read" | "ai.generate" | "quizzes.manage" | "sessions.play" | "exams.manage" | "exams.take"): boolean {
+function hasQuestionAccess(me: Me, permission: "questions.read" | "questions.write" | "ai.generate" | "quizzes.manage" | "sessions.play" | "exams.manage" | "exams.take"): boolean {
   if (me.platformPermissions.includes(permission)) return true;
   return me.institutions.some((i) => i.status === "active" && hasPerm(me, permission, i.institutionId));
 }
@@ -25,6 +25,7 @@ export function navFor(me: Me): NavItem[] {
   if (hasPerm(me, "users.read")) items.push({ href: "/users", label: "Users" });
 
   if (hasQuestionAccess(me, "questions.read")) items.push({ href: "/questions", label: "Question bank" });
+  if (hasQuestionAccess(me, "questions.write")) items.push({ href: "/uploads", label: "Import files" });
   if (hasQuestionAccess(me, "ai.generate")) items.push({ href: "/studio", label: "AI Studio" });
   if (hasQuestionAccess(me, "quizzes.manage")) items.push({ href: "/quizzes", label: "Quizzes" });
   if (hasQuestionAccess(me, "exams.manage")) items.push({ href: "/exams", label: "Exams" });

@@ -31,4 +31,11 @@ The web app reads only `API_URL` (server-side, for the proxy rewrite) and the op
 | `AI_DAILY_LIMIT_PER_USER` | 30 | generation requests per user per 24 h (failed attempts count) |
 | `AI_RATE_LIMIT_PER_MIN` | 10 | per-IP limit on the generate endpoint |
 
+### Uploads and OCR (backend only)
+| Variable | Default | Purpose |
+|---|---|---|
+| `OCR_ENABLED` | true | set `false` to refuse pictures and scanned PDFs even if the programs exist. When `true`, OCR is used only if `tesseract` and `pdftoppm` are found on the server |
+| `OCR_LANG` | eng | tesseract language code(s), e.g. `eng` or `eng+fra`; the language data must be installed |
+| `UPLOAD_RATE_LIMIT_PER_MIN` | 20 | uploads per user per minute |
+
 `pnpm dev:api`, `pnpm --filter @tmp/api start`, `db:migrate` and `db:seed` read `apps/api/.env` automatically (Node `--env-file-if-exists`).

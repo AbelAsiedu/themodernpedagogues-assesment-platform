@@ -168,6 +168,7 @@ input:focus-visible, select:focus-visible { outline-offset: 0; border-color: var
 /* ---------- feedback states ---------- */
 .note { padding: 0.8rem 1rem; border-radius: var(--radius); border: 1px solid; max-width: 44rem; }
 .note.error { background: var(--pen-wash); border-color: #e8b4b4; color: #7d1717; }
+.note.warn { background: #fff7e0; border-color: #e6cf8a; color: #5e4600; }
 .note.good { background: var(--ok-wash); border-color: #b5dbc4; color: #11492d; }
 .empty { border: 2px dashed var(--rule); border-radius: var(--radius); padding: 1.4rem; display: grid; gap: 0.4rem; max-width: 40rem; background: var(--surface); }
 .empty strong { font-family: var(--font-display); font-size: var(--step-1); }
@@ -283,3 +284,18 @@ a.rowlink { color: var(--ink); font-weight: 700; }
 .exam-q textarea { width: 100%; max-width: 44rem; }
 
 @media (max-width: 52rem) { .exam-bar { top: 4.1rem; } }
+
+/* ------------------------------------------------------------------ file import */
+.dropzone { border: 2px dashed var(--rule); border-radius: var(--radius); padding: 1rem; background: var(--surface); display: grid; gap: 0.6rem; }
+.import-table td, .import-table th { vertical-align: top; }
+.import-table .pick { width: 2.5rem; }
+.import-table input[type="checkbox"] { width: 1.3rem; height: 1.3rem; accent-color: var(--ink); }
+.import-table tr.bad { background: var(--pen-wash); }
+.import-table .why { color: #7d1717; font-size: var(--step--1); }
+.import-table .fine { color: var(--ink-soft); font-size: var(--step--1); }
+.import-table details summary { cursor: pointer; color: var(--ink-soft); font-size: var(--step--1); min-height: 24px; }
+.sec-count { font-variant-numeric: tabular-nums; font-weight: 700; }
+.sec-count.over { color: var(--pen); }
+.check-line { display: flex; gap: 0.6rem; align-items: flex-start; font-weight: 400; min-height: 44px; }
+.check-line input { width: 1.3rem; height: 1.3rem; accent-color: var(--ink); margin-top: 0.15rem; flex: none; }
+.plain-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; max-width: 52rem; }

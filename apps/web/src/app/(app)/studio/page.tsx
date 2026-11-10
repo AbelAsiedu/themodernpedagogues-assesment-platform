@@ -1,9 +1,11 @@
 "use client";
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { Suspense, useState, type FormEvent } from "react";
+import { useSearchParams } from "next/navigation";
 import { DIFFICULTIES, MAX_QUESTIONS_PER_REQUEST, MAX_SOURCE_TEXT, QUESTION_TYPES, QUESTION_TYPE_LABEL, type QuestionType } from "@tmp/shared";
 import { api, describeError, useApi } from "@/lib/api";
 import type { Question, Subject } from "@/lib/questions";
+import type { UploadSummary } from "@/lib/uploads";
 import { Empty, ErrorNote, Loading, PageHead } from "@/components/ui";
 import { SchoolPicker, useSchoolChoice } from "@/components/school-picker";
 import { QuestionView, StatusPill } from "@/components/question-view";
@@ -14,6 +16,11 @@ interface Status { configured: boolean; provider: string | null; model: string |
 interface Gen { id: string; status: string; model: string; requestedCount: number; savedCount: number; rejectedCount: number; createdAt: string; error: string | null }
 
 export default function StudioPage() {
+  // useSearchParams needs a Suspense boundary in the App Router.
+  return <Suspense fallback={<Loading />}><StudioInner /></Suspense>;
+}
+
+function StudioInner() {
   const { state } = useSession();
   const { schools, loading, schoolId, choose } = useSchoolChoice("ai.generate");
   if (state.status !== "ready") return null;
@@ -39,6 +46,11 @@ function Studio({ schoolId }: { schoolId: string }) {
   const status = useApi<Status>(`/institutions/${schoolId}/ai/status`);
   const subjects = useApi<{ subjects: Subject[] }>(`/institutions/${schoolId}/subjects`);
   const gens = useApi<{ generations: Gen[] }>(`/institutions/${schoolId}/ai/generations`);
+  const files = useApi<{ uploads: UploadSummary[] }>(`/institutions/${schoolId}/uploads`);
+  const wantedUpload = useSearchParams().get("upload") ?? "";
+  const [uploadId, setUploadId] = useState(wantedUpload);
+  const [parts, setParts] = useState<Set<string>>(new Set());
+  const [noteLen, setNoteLen] = useState(0);
   const [subjectId, setSubjectId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +61,11 @@ function Studio({ schoolId }: { schoolId: string }) {
   const canReview = hasPerm(me, "questions.review", schoolId);
   const subs = subjects.data?.subjects ?? [];
   const chosen = subs.find((s) => s.id === (subjectId || subs[0]?.id));
+  const file = files.data?.uploads.find((x) => x.id === uploadId);
+  const partChars = (file?.sections ?? []).filter((x) => parts.has(x.id)).reduce((n, x) => n + x.chars, 0);
+  const grounded = partChars + (partChars && noteLen ? noteLen + 2 : noteLen);
+  const overLimit = !!file && grounded > MAX_SOURCE_TEXT;
+  const togglePart = (id: string) => setParts((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
   async function generate(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -61,6 +78,7 @@ function Studio({ schoolId }: { schoolId: string }) {
           subjectId: chosen?.id, topicId: f.get("topicId") || null, type: f.get("type"), count: Number(f.get("count")),
           difficulty: f.get("difficulty"), level: f.get("level"),
           sourceText: String(f.get("sourceText") ?? "").trim() || undefined, focus: String(f.get("focus") ?? "").trim() || undefined,
+          ...(file ? { uploadId: file.id, sectionIds: [...parts] } : {}),
         },
       });
       setResults(r);
@@ -114,10 +132,31 @@ function Studio({ schoolId }: { schoolId: string }) {
             </div>
             <div className="field"><label htmlFor="g-focus">Focus <span className="hint">(optional)</span></label>
               <input id="g-focus" name="focus" maxLength={300} placeholder="e.g. causes and effects of ethnic conflict" /></div>
+            <div className="field"><label htmlFor="g-file">A file you've uploaded <span className="hint">(optional)</span></label>
+              <select id="g-file" value={uploadId} onChange={(e) => { setUploadId(e.target.value); setParts(new Set()); }}>
+                <option value="">None: use my notes below or the syllabus only</option>
+                {files.data?.uploads.filter((x) => x.sections.length).map((x) => <option key={x.id} value={x.id}>{x.filename}</option>)}
+              </select>
+              <span className="hint">Add files on the <Link href="/uploads">Import files</Link> page.</span></div>
+            {file && (
+              <fieldset className="field" style={{ border: 0, padding: 0, margin: 0 }}>
+                <legend>Which parts should the questions be based on?</legend>
+                <div className="check-list">
+                  {file.sections.map((x) => (
+                    <label key={x.id}>
+                      <input type="checkbox" checked={parts.has(x.id)} onChange={() => togglePart(x.id)} />
+                      <span><strong>{x.label}</strong> <span className="hint">({x.chars.toLocaleString("en-GH")} characters{x.ocr ? ", read from a picture, so check it" : ""})</span><br /><span className="hint">{x.preview}…</span></span>
+                    </label>
+                  ))}
+                </div>
+                <span className={`sec-count${overLimit ? " over" : ""}`} aria-live="polite">{grounded.toLocaleString("en-GH")} of {MAX_SOURCE_TEXT.toLocaleString("en-GH")} characters chosen{overLimit ? ". Choose fewer parts." : ""}</span>
+                {file.warnings.map((w) => <span className="hint" key={w}>{w}</span>)}
+              </fieldset>
+            )}
             <div className="field"><label htmlFor="g-src">Your notes <span className="hint">(optional)</span></label>
-              <textarea id="g-src" name="sourceText" rows={5} maxLength={MAX_SOURCE_TEXT} />
+              <textarea id="g-src" name="sourceText" rows={5} maxLength={MAX_SOURCE_TEXT} onChange={(e) => setNoteLen(e.target.value.trim().length)} />
               <span className="hint">Paste your own lesson notes and the questions will be based only on them. Use notes you wrote or have the right to use. Up to {MAX_SOURCE_TEXT.toLocaleString()} characters.</span></div>
-            <div className="btn-row"><button className="btn" type="submit" disabled={busy || (s ? !s.configured : false)}>{busy ? "Writing questions… this can take up to a minute" : "Generate drafts"}</button></div>
+            <div className="btn-row"><button className="btn" type="submit" disabled={busy || overLimit || (!!file && !parts.size) || (s ? !s.configured : false)}>{busy ? "Writing questions… this can take up to a minute" : "Generate drafts"}</button></div>
           </form>
         )}
         {error && <div className="note error" role="alert"><p>{error}</p></div>}

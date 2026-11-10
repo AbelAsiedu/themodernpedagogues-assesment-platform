@@ -1,11 +1,11 @@
 # Known limitations
 
-**Scope:** Phases 1, 3, 4 and 5 exist (accounts/permissions/schools/classes/audit; question bank and AI Question Studio; quizzes with join codes and a live leaderboard; timed exams). Everything else in the brief is unbuilt.
+**Scope:** Phases 1, 3, 3b (file import), 4 and 5 exist (accounts/permissions/schools/classes/audit; question bank and AI Question Studio; quizzes with join codes and a live leaderboard; timed exams). Everything else in the brief is unbuilt.
 
 ## Not built
-AI paper generation, AI marking, AI validation of existing questions, document/PDF/image upload and OCR · per-student quiz reports/exports · official-style BECE/WASSCE templates ·
+AI paper generation, AI marking, AI validation of existing questions · per-student quiz reports/exports · official-style BECE/WASSCE templates ·
 exam interface and timers · marking and AI grading · results and analytics · reports/exports · notifications ·
-file uploads/OCR · AI management centre · platform settings UI · global search · SSO.
+AI management centre · platform settings UI · global search · SSO.
 
 ## Not done
 - **Live OpenAI call unverified.** The AI client is tested against a simulated provider and a local mock HTTP server only. First real run needs the key on a machine with internet; check model name (`AI_MODEL`, default `gpt-4o-mini`) is available to your account.
@@ -38,6 +38,15 @@ file uploads/OCR · AI management centre · platform settings UI · global searc
 - No web/UI automated tests and no committed browser E2E (the multi-student flow was run by a throwaway script and screenshots); no load tests. **No capacity claim is made.**
 - Backup/recovery not set up or rehearsed.
 - First production super-admin bootstrap script not written.
+
+## File import (Phase 3b)
+- **Only ready-made question *tables* are imported directly.** A question paper inside a PDF or Word file is read as text, but using it means AI-writing *new* questions from it; there is no "extract the existing questions faithfully" mode yet.
+- Multi-answer, open-ended and poll rows in a spreadsheet are flagged and skipped; images and image links are ignored; tables inside Word/PDF are read as plain text.
+- **OCR depends on `tesseract` and `pdftoppm` being installed on the server**, takes about 1 s per page (15 pages max) and can make mistakes; its output is labelled. It was checked by hand on three real garbled/scanned PDFs, and automatically only where the programs exist.
+- Legacy `.doc/.xls/.ppt`, password-protected PDFs and archives are refused.
+- The "I have permission" tick records what the teacher said. It is **not a copyright check**; the platform cannot tell whether material is copyrighted.
+- The preview lists every parsed row on one long page (500 max), with no paging or search.
+- AI-from-file generation is tested with a simulated provider only (the live OpenAI call is still unverified).
 
 ## Security/behaviour caveats
 See SECURITY.md. Highlights: app DB role is the table owner in dev; `trustProxy: true`; no password reset or MFA;

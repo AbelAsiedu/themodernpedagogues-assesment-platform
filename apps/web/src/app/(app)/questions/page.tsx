@@ -33,7 +33,7 @@ export default function QuestionBankPage() {
 function Bank({ schoolId }: { schoolId: string }) {
   const { state } = useSession();
   const me = state.status === "ready" ? state.me : null;
-  const [filters, setFilters] = useState({ subjectId: "", status: "", type: "", q: "" });
+  const [filters, setFilters] = useState({ subjectId: "", status: "", type: "", source: "", q: "" });
   const [page, setPage] = useState(0);
   const [writing, setWriting] = useState(false);
   const [msg, setMsg] = useState<{ kind: "good" | "error"; text: string } | null>(null);
@@ -104,11 +104,15 @@ function Bank({ schoolId }: { schoolId: string }) {
             <select id="f-t" value={filters.type} onChange={(e) => set({ type: e.target.value })}>
               <option value="">All</option>{QUESTION_TYPES.map((t) => <option key={t} value={t}>{QUESTION_TYPE_LABEL[t]}</option>)}
             </select></div>
+          <div className="field"><label htmlFor="f-src">Source</label>
+            <select id="f-src" value={filters.source} onChange={(e) => set({ source: e.target.value })}>
+              <option value="">All</option><option value="manual">Written</option><option value="ai">AI draft</option><option value="import">Imported</option>
+            </select></div>
         </div>
 
         {list.loading ? <Loading /> : list.error ? <ErrorNote error={list.error} retry={list.reload} /> : !list.data?.questions.length ? (
           <Empty title="No questions found">
-            {subjects.data?.subjects.length ? (canWrite ? "Write one yourself, or generate drafts in the AI Studio." : "Nothing matches these filters.") : "Add a subject below first, then you can write questions."}
+            {subjects.data?.subjects.length ? (canWrite ? "Write one yourself, import a file, or generate drafts in the AI Studio." : "Nothing matches these filters.") : "Add a subject below first, then you can write questions."}
           </Empty>
         ) : (
           <>
@@ -123,7 +127,7 @@ function Bank({ schoolId }: { schoolId: string }) {
                       <td>{subjectName(q.subjectId)}</td>
                       <td>{QUESTION_TYPE_LABEL[q.type]}</td>
                       <td><StatusPill status={q.status} /></td>
-                      <td>{q.source === "ai" ? "AI draft" : "Written"}</td>
+                      <td>{q.source === "ai" ? "AI draft" : q.source === "import" ? "Imported" : "Written"}</td>
                     </tr>
                   ))}
                 </tbody>
