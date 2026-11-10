@@ -222,7 +222,7 @@ export class ExamEngine {
 
   /**
    * Deterministic marking of auto-markable items for ONE submitted session. Idempotent: safe to run twice, and the sweeper
-   * re-runs anything left 'pending'. Essays get no row: they wait for a person (Phase 6).
+   * re-runs anything left 'pending'. Essays get no row here: they wait for a person to mark them (see exam/marking.ts).
    */
   async markSession(sessionId: string) {
     await this.db.transaction(async (tx) => {
@@ -262,6 +262,7 @@ export class ExamEngine {
     ]);
     const answered = new Set(responses.filter((r) => isAnswered(r.answer)).map((r) => r.itemPosition));
     const awardedOf = new Map(marks.map((m) => [m.itemPosition, m.awarded]));
+    const commentOf = new Map(marks.map((m) => [m.itemPosition, m.comment]));
 
     let totalAwarded = 0, totalMax = 0, pendingItems = 0;
     const out = sections.map((sec) => {
@@ -271,6 +272,8 @@ export class ExamEngine {
         position: i.position, max: i.marks, type: i.type,
         status: (!answered.has(i.position) ? "unanswered" : awardedOf.has(i.position) ? "marked" : "pending") as St,
         awarded: awardedOf.get(i.position) ?? null as number | null,
+        /** A marker's note to the student. Only ever sent to the student once results are released. */
+        comment: (commentOf.get(i.position) ?? null) as string | null,
       }));
       let secAwarded = 0, secMax = 0, secPending = 0;
       if (sec.ruleType === "answer_any") {

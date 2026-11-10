@@ -1,10 +1,10 @@
 # Known limitations
 
-**Scope:** Phases 1, 3, 3b (file import), 4 and 5 exist (accounts/permissions/schools/classes/audit; question bank and AI Question Studio; quizzes with join codes and a live leaderboard; timed exams). Everything else in the brief is unbuilt.
+**Scope:** Phases 1, 3, 3b (file import), 4, 5 and 6 exist (accounts/permissions/schools/classes/audit; question bank and AI Question Studio; quizzes with join codes and a live leaderboard; timed exams; essay marking, analytics and CSV export). Everything else in the brief is unbuilt.
 
 ## Not built
-AI paper generation, AI marking, AI validation of existing questions · per-student quiz reports/exports · official-style BECE/WASSCE templates ·
-exam interface and timers · marking and AI grading · results and analytics · reports/exports · notifications ·
+AI paper generation, AI validation of existing questions, automatic/batch AI marking · per-student quiz reports/exports · official-style BECE/WASSCE templates ·
+grade boundaries and grading configurations · per-student report cards/PDF exports · notifications ·
 AI management centre · platform settings UI · global search · SSO.
 
 ## Not done
@@ -12,7 +12,7 @@ AI management centre · platform settings UI · global search · SSO.
 - AI generation runs inline in the request (max 10 questions, 60 s timeout), not in a background queue.
 - Question bank is per-school only; no shared platform-wide bank, tagging beyond subject/topic, images in questions, or import/export.
 - **Exams (Phase 5):**
-  - **Essays are saved but never marked.** There is no manual or AI marking yet (Phase 6), so teacher and student totals exclude essay marks and say how many answers are waiting. Results should not be treated as final while any are pending.
+  - Written answers need a person to mark them (see Phase 6 below). Until they do, totals are incomplete and say how many answers are waiting.
   - No official-style BECE/WASSCE templates. Structures are teacher-built; `official_verified` exists only as a guarded label that needs a recorded source specification.
   - Only `answer_all` and `answer_any n` section rules. No sub-parts `(a)(ii)`, no "one from each group", no per-section question shuffling (options are shuffled per candidate).
   - One attempt per candidate. An ended attempt cannot be reopened or extended; there is no pause/resume, invigilator notes or suspicious-activity reporting.
@@ -20,7 +20,7 @@ AI management centre · platform settings UI · global search · SSO.
   - Saves are accepted 3 s past the deadline (network allowance) and the sweeper auto-submits after that. The sweeper runs every 15 s per API instance, so an attempt abandoned with a closed browser can sit unsubmitted for up to ~18 s after the deadline (it is shown as "time up" in the control room and submitted the moment anyone opens it).
   - Answers survive a refresh and short outages via browser local storage only; there is no service-worker/offline mode, and clearing site data mid-outage loses unsent answers.
   - The control room polls every 5 s; it is not a live WebSocket view. Extra time is per candidate (no bulk or class-wide extension, no stored accommodation profiles).
-  - Receipts prove what the server stored (hash kept) but there is no candidate-facing way to verify a receipt yet, and no result exports or analytics.
+  - Receipts prove what the server stored (hash kept) but there is no candidate-facing way to verify a receipt yet.
   - **No load or concurrency capacity testing.** Correctness under a handful of concurrent writers is tested; capacity is unknown. Per-save cost is one small transaction (a row share-lock, an upsert and an insert).
 - **Quizzes (Phase 4):**
   - Students need an account and must be in the school (and the class, if the session is restricted). There is no guest/anonymous join.
@@ -38,6 +38,17 @@ AI management centre · platform settings UI · global search · SSO.
 - No web/UI automated tests and no committed browser E2E (the multi-student flow was run by a throwaway script and screenshots); no load tests. **No capacity claim is made.**
 - Backup/recovery not set up or rehearsed.
 - First production super-admin bootstrap script not written.
+
+## Marking, analytics and export (Phase 6)
+- **AI mark suggestions have only been run against a simulated provider**, never the real OpenAI service. They are one answer at a time, on request; there is no batch or automatic AI marking. Suggestions can be wrong, and nobody has measured how closely they agree with teachers.
+- **The answer text is sent to the AI vendor** when a suggestion is requested (no name or email). Schools that cannot allow this should not enable AI.
+- No grade boundaries or grading configurations: results are marks and percentages only, with no A–F / 1–9 grades.
+- No separate second-marker or moderation workflow. Another marker can change a mark with a recorded reason, and the history shows it, but there is no blind double-marking, tolerance check or moderator queue.
+- Marking has no assignment of scripts to particular markers; anyone with `exams.manage` in the school can mark any answer. "Hide names" is a display option, not a guarantee of anonymity (the page still contains the names).
+- A mark is one row per answer. There is no partial save of a half-marked rubric, no annotations on the student's text, and no marking of handwriting or images.
+- Statistics are descriptive (mean, median, bands, facility, option counts). No discrimination index, reliability figures or cross-exam trends. Percentages use only completely marked papers.
+- Export is one CSV per sitting. No Excel/PDF reports, no per-student report cards, no export of the answers themselves.
+- Marking a very large sitting loads every submitted written answer into one page; fine for a class, untested at scale (no load test).
 
 ## File import (Phase 3b)
 - **Only ready-made question *tables* are imported directly.** A question paper inside a PDF or Word file is read as text, but using it means AI-writing *new* questions from it; there is no "extract the existing questions faithfully" mode yet.

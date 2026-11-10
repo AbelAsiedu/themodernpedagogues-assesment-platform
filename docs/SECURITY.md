@@ -53,6 +53,22 @@ code with someone in the same school; there is no proctoring and none is claimed
 
 **Not covered:** no proctoring, tab-switch or device checks (none are claimed); local-storage backup of unsent answers is readable by anyone using the same browser profile; no load/abuse testing.
 
+## Marking and export (Phase 6) — what is protected and tested
+
+| Concern | Control | Evidence |
+|---|---|---|
+| Marking by the wrong person | every marking, history, AI and export route resolves the exam's school server-side and needs `exams.manage` there; other schools get a non-disclosing 403 | tests incl. permission narrowing and mutation check |
+| Client choosing the total or the rubric | the server sums the per-point values and checks them against the rubric frozen in the sitting | tests |
+| Two markers overwriting each other | `basedOn` compare under a row lock; first-mark race resolved by a unique key (one 409) | tests incl. simultaneous request |
+| Silent changes to marks | reason required, append-only `exam_mark_events` (trigger refuses UPDATE), audit entries | tests |
+| AI deciding marks | suggestions live in their own table, are never read by results, never sent to students; only a person's save makes a mark | tests |
+| Prompt injection inside an answer | answer fenced and labelled untrusted; output validated and bounded; the mark is still a person's decision | tests |
+| Student identity sent to the AI vendor | name and email are not in the prompt; **the answer text is** | test (names absent) |
+| Spreadsheet formula injection via names | cells starting `= + - @ tab CR` get a leading apostrophe; safe file name; no-store; download audited | tests incl. mutation check |
+| Early or unsafe release | releasing with unmarked written answers needs explicit confirmation | tests |
+
+**Not covered:** answer text reaches a third party when AI suggestions are used; no marker assignment or blind marking enforcement; no load testing.
+
 ## File uploads (Phase 3b) — what is protected and tested
 Details in [FILE_IMPORT.md](FILE_IMPORT.md).
 

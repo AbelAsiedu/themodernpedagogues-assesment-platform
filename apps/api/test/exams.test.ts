@@ -514,7 +514,11 @@ describe("results visibility (formal-exam isolation)", () => {
     expect((await stud.client.call("POST", `/sittings/${s.id}/release-results`)).statusCode).toBe(403);
     expect((await teacherB.call("POST", `/sittings/${s.id}/release-results`)).statusCode).toBe(403);
     clockAt(4 * 3600_000);
-    expect((await teacherA.call("POST", `/sittings/${s.id}/release-results`)).statusCode).toBe(200);
+    // A written answer is still unmarked, so releasing must be a deliberate choice.
+    const guarded = await teacherA.call("POST", `/sittings/${s.id}/release-results`);
+    expect(guarded.statusCode).toBe(409);
+    expect(guarded.json().error.message).toMatch(/unmarked/);
+    expect((await teacherA.call("POST", `/sittings/${s.id}/release-results`, { allowUnmarked: true })).statusCode).toBe(200);
     const shown = (await stud.client.call("GET", `/exam-sessions/${sid}/result`)).json();
     expect(shown).toMatchObject({ released: true, totalAwarded: 1, totalMax: 11, markingComplete: false });
     const text = JSON.stringify(shown);

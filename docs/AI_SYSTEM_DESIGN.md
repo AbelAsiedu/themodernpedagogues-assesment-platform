@@ -1,4 +1,4 @@
-# AI system — PARTLY IMPLEMENTED (question generation only)
+# AI system — PARTLY IMPLEMENTED (question generation and mark suggestions)
 
 **Built (Phase 3):** AI Question Studio — generate draft MCQ, true/false, short-answer and essay questions with OpenAI.
 **Not built:** paper generation, AI marking/explanations, validation of existing questions, OCR, document/PDF upload,
@@ -29,5 +29,8 @@ bulk/queued jobs, provider/model management UI, cost reporting. Those remain des
 - Queued jobs for long work (documents, bulk), status polling; spend caps per institution; admin-managed providers/models.
 - Document-grounded generation with source references from uploaded files; OCR with confidence flags.
 - Maths/science answer keys verified by deterministic computation where possible.
-- Marking proposals (see MARKING_AND_GRADING.md): AI only proposes against an approved rubric; teacher moderation is final.
-- Privacy: strip identifiers from any marking prompts; send student data only when needed and authorised.
+- Batch / background AI marking and a moderation queue; comparing AI suggestions with teachers' marks to measure agreement.
+- Privacy beyond what exists: see below.
+
+## Mark suggestions (Phase 6, built)
+One answer at a time, on request, against the rubric frozen into the sitting. Prompt version `mark-1`. The answer is fenced as untrusted text; the reply must pass a strict schema and the rubric's own limits (one retry, then rejected). The student's name and email are **not** sent; the answer text is. Stored in `ai_mark_proposals`, apart from marks, never counted and never shown to students; only a person's save creates a mark. Counts against the same daily quota. **Tested against a simulated provider only.** Details: [MARKING_AND_GRADING.md](MARKING_AND_GRADING.md).

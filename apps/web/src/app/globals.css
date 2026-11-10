@@ -299,3 +299,13 @@ a.rowlink { color: var(--ink); font-weight: 700; }
 .check-line { display: flex; gap: 0.6rem; align-items: flex-start; font-weight: 400; min-height: 44px; }
 .check-line input { width: 1.3rem; height: 1.3rem; accent-color: var(--ink); margin-top: 0.15rem; flex: none; }
 .plain-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; max-width: 52rem; }
+
+/* Marking */
+.card { border: 1.5px solid var(--rule); border-radius: var(--radius); padding: 1rem 1.1rem; background: var(--surface); }
+.check { display: inline-flex; gap: 0.5rem; align-items: center; font-weight: 400; min-height: 44px; }
+.check input { width: 1.2rem; height: 1.2rem; accent-color: var(--ink); }
+.answer-text { background: #fff; }
+.bars { display: grid; gap: 0.25rem; max-width: 34rem; }
+.bars .bar-row { display: grid; grid-template-columns: 5.5rem 1fr 2.5rem; gap: 0.5rem; align-items: center; }
+.bars .bar { height: 0.9rem; background: var(--ink); border-radius: 2px; min-width: 2px; }
+.bars .bar-row span:last-child { text-align: right; font-variant-numeric: tabular-nums; }

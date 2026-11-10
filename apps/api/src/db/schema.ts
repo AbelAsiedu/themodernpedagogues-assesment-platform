@@ -613,7 +613,9 @@ export const examSubmissions = pgTable(
   (t) => [uniqueIndex("exam_submissions_receipt_uq").on(t.receipt), check("exam_submissions_kind_ck", sql`${t.kind} in ('student','auto')`)],
 );
 
-/** Marks awarded per item. Only deterministic ("auto") marks exist so far; essays have no row until a person marks them. */
+export interface CriterionAward { index: number; awarded: number }
+
+/** Marks awarded per item. "auto" marks are deterministic; "manual" marks were set by a person against the frozen rubric. Essays have no row until a person marks them. */
 export const examMarks = pgTable(
   "exam_marks",
   {
@@ -623,11 +625,75 @@ export const examMarks = pgTable(
     maxMarks: doublePrecision("max_marks").notNull(),
     method: text("method").notNull().default("auto"),
     markedAt: timestamp("marked_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Who set a manual mark. Null for automatic marks. */
+    markedBy: uuid("marked_by").references(() => users.id, { onDelete: "set null" }),
+    /** Per rubric point, for manual essay marks. */
+    criteria: jsonb("criteria").$type<CriterionAward[]>(),
+    /** Written for the student; shown to them only after results are released. */
+    comment: text("comment"),
   },
   (t) => [
     primaryKey({ columns: [t.sessionId, t.itemPosition] }),
     check("exam_marks_range_ck", sql`${t.awarded} >= 0 and ${t.awarded} <= ${t.maxMarks}`),
     check("exam_marks_method_ck", sql`${t.method} in ('auto','manual')`),
+  ],
+);
+
+/**
+ * Every manual mark and every later change, with who, when, what it was before and why. Append-only: UPDATE is blocked by a
+ * database trigger (see drizzle/0006_*.sql). The current mark lives in exam_marks; this is its history.
+ */
+export const examMarkEvents = pgTable(
+  "exam_mark_events",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    sessionId: uuid("session_id").notNull().references(() => examSessions.id, { onDelete: "cascade" }),
+    itemPosition: integer("item_position").notNull(),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+    actorId: uuid("actor_id").references(() => users.id, { onDelete: "set null" }),
+    action: text("action").notNull(),
+    previousAwarded: doublePrecision("previous_awarded"),
+    awarded: doublePrecision("awarded").notNull(),
+    criteria: jsonb("criteria").$type<CriterionAward[]>().notNull(),
+    reason: text("reason"),
+    /** Set when the marker started from an AI proposal (the mark itself is always the marker's). */
+    aiProposalId: uuid("ai_proposal_id"),
+  },
+  (t) => [
+    index("exam_mark_events_item_idx").on(t.sessionId, t.itemPosition, t.at),
+    check("exam_mark_events_action_ck", sql`${t.action} in ('mark','adjust')`),
+  ],
+);
+
+/**
+ * An AI suggestion for one essay answer. NEVER a mark: it is stored apart from exam_marks, never counted in results and never
+ * shown to students. A person decides, and the final mark is theirs.
+ */
+export const aiMarkProposals = pgTable(
+  "ai_mark_proposals",
+  {
+    id: id(),
+    sessionId: uuid("session_id").notNull().references(() => examSessions.id, { onDelete: "cascade" }),
+    itemPosition: integer("item_position").notNull(),
+    requestedBy: uuid("requested_by").references(() => users.id, { onDelete: "set null" }),
+    provider: text("provider").notNull(),
+    model: text("model").notNull(),
+    promptVersion: text("prompt_version").notNull(),
+    /** SHA-256 of the answer text that was assessed. */
+    answerHash: text("answer_hash").notNull(),
+    criteria: jsonb("criteria").$type<(CriterionAward & { reason: string })[]>().notNull(),
+    proposedTotal: doublePrecision("proposed_total").notNull(),
+    reasoning: text("reasoning").notNull(),
+    missingPoints: jsonb("missing_points").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    confidence: text("confidence").notNull(),
+    /** pending → used (the marker started from it) */
+    status: text("status").notNull().default("pending"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("ai_mark_proposals_item_idx").on(t.sessionId, t.itemPosition, t.createdAt),
+    check("ai_mark_proposals_status_ck", sql`${t.status} in ('pending','used')`),
+    check("ai_mark_proposals_conf_ck", sql`${t.confidence} in ('low','medium','high')`),
   ],
 );
 

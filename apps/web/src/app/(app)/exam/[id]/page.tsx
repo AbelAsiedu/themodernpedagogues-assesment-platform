@@ -156,7 +156,7 @@ export default function ExamRoom() {
     return () => { clearInterval(t); clearInterval(sync); };
   }, [view?.session.status, deadline, load]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [result, setResult] = useState<{ released: boolean; totalAwarded?: number; totalMax?: number; markingComplete?: boolean; sections?: { title: string; awarded: number; max: number; pending: number }[] } | null>(null);
+  const [result, setResult] = useState<{ released: boolean; totalAwarded?: number; totalMax?: number; markingComplete?: boolean; sections?: { title: string; awarded: number; max: number; pending: number; items?: { position: number; comment: string | null }[] }[] } | null>(null);
   useEffect(() => { if (view?.submission && view.sitting.resultsReleased) void api<NonNullable<typeof result>>(`/exam-sessions/${id}/result`).then(setResult).catch(() => {}); }, [view?.submission, view?.sitting.resultsReleased, id]);
 
   const all = useMemo(() => view?.sections.flatMap((s) => s.items) ?? [], [view]);
@@ -181,6 +181,12 @@ export default function ExamRoom() {
             <div className="table-wrap"><table><caption className="sr-only">Marks by section</caption>
               <thead><tr><th scope="col">Section</th><th scope="col">Marks</th></tr></thead>
               <tbody>{result.sections?.map((s) => <tr key={s.title}><td>{s.title}</td><td>{s.awarded}/{s.max}{s.pending ? ` (${s.pending} waiting to be marked)` : ""}</td></tr>)}</tbody></table></div>
+            {result.sections?.some((s) => s.items?.some((i) => i.comment)) && (
+              <>
+                <h3>Comments from your teacher</h3>
+                <ul>{result.sections.flatMap((s) => (s.items ?? []).filter((i) => i.comment).map((i) => <li key={i.position}><strong>Question {i.position + 1}:</strong> {i.comment}</li>))}</ul>
+              </>
+            )}
           </section>
         ) : <p>Results will appear here when your teacher releases them.</p>}
         <p><Link href="/my-exams">← My exams</Link></p>

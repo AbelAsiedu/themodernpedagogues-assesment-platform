@@ -28,6 +28,8 @@ import websocket from "@fastify/websocket";
 import multipart from "@fastify/multipart";
 import { MAX_UPLOAD_BYTES } from "@tmp/shared";
 import { uploadRoutes } from "./routes/uploads.js";
+import { markingRoutes } from "./routes/marking.js";
+import { resultsRoutes } from "./routes/results.js";
 import { Leaderboard } from "./quiz/leaderboard.js";
 import { LiveHub } from "./quiz/hub.js";
 import type { AiProvider } from "./ai/provider.js";
@@ -187,6 +189,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       await v1.register(liveRoutes);
       await v1.register(examRoutes);
       await v1.register(examPlayRoutes);
+      await v1.register(markingRoutes);
+      await v1.register(resultsRoutes);
     },
     { prefix: "/api/v1" },
   );

@@ -9,6 +9,7 @@ import {
   sittingItems, sittingSections, users,
 } from "../db/schema.js";
 import { badRequest, conflict, forbidden, notFound, parse } from "../errors.js";
+import { expectedStudents as expectedStudentsOf } from "../exam/people.js";
 
 const idParam = z.object({ id: z.string().uuid() });
 
@@ -181,20 +182,7 @@ export async function examRoutes(app: FastifyInstance) {
     return { sittings: rows.map((r) => ({ ...r.sitting, started: r.started, submitted: r.submitted })) };
   });
 
-  /** Who is expected: the class's students, or every active student in the school. */
-  async function expectedStudents(sitting: { institutionId: string; classId: string | null }) {
-    const base = db
-      .select({ id: users.id, fullName: users.fullName })
-      .from(memberships)
-      .innerJoin(users, eq(users.id, memberships.userId))
-      .where(
-        and(
-          eq(memberships.institutionId, sitting.institutionId), eq(memberships.role, "student"), eq(memberships.status, "active"),
-          sitting.classId ? sql`${users.id} in (select user_id from class_members where class_id = ${sitting.classId})` : undefined,
-        ),
-      );
-    return base.orderBy(users.fullName);
-  }
+  const expectedStudents = (sitting: { institutionId: string; classId: string | null }) => expectedStudentsOf(db, sitting);
 
   /** The control room: who has started, who is working, who has submitted, and when each deadline is. */
   app.get("/sittings/:id", async (req) => {
@@ -245,7 +233,19 @@ export async function examRoutes(app: FastifyInstance) {
     return { id, status: "cancelled" };
   });
 
-  /** Per-candidate results (deterministic marks only; essays show as pending). */
+  /** Submitted written answers with no mark yet. */
+  async function unmarkedAnswers(sittingId: string): Promise<number> {
+    const r = await db.execute<{ n: number }>(sql`
+      select count(*)::int as n from exam_responses r
+      join exam_sessions s on s.id = r.session_id and s.status = 'submitted'
+      join sitting_items i on i.sitting_id = s.sitting_id and i.position = r.item_position and i.type = 'essay'
+      left join exam_marks m on m.session_id = r.session_id and m.item_position = r.item_position
+      where s.sitting_id = ${sittingId} and m.session_id is null
+        and r.answer is not null and btrim(coalesce(r.answer->>'text', '')) <> ''`);
+    return [...r][0]?.n ?? 0;
+  }
+
+  /** Per-candidate results (automatic marks plus any marks a person has given; unmarked written answers show as waiting). */
   app.get("/sittings/:id/results", async (req) => {
     const { id } = parse(idParam, req.params);
     const { row: sitting } = await sittingFor(req, id);
@@ -266,6 +266,12 @@ export async function examRoutes(app: FastifyInstance) {
     const { id } = parse(idParam, req.params);
     const { actor, row } = await sittingFor(req, id);
     if (app.exams.now() < row.closesAt) throw conflict("Results can be released after the exam closes");
+    // Releasing while written answers are still unmarked would show students incomplete totals, so it has to be a deliberate choice.
+    const { allowUnmarked } = parse(z.object({ allowUnmarked: z.boolean().default(false) }), req.body ?? {});
+    if (!allowUnmarked && !row.resultsReleasedAt) {
+      const waiting = await unmarkedAnswers(id);
+      if (waiting > 0) throw conflict(`${waiting} written answer${waiting === 1 ? " is" : "s are"} still unmarked. Mark them first, or release anyway knowing totals will be incomplete.`);
+    }
     const [u] = await db.update(examSittings).set({ resultsReleasedAt: row.resultsReleasedAt ?? new Date() }).where(eq(examSittings.id, id)).returning();
     await audit(db, { action: "sitting.release_results", actorUserId: actor.id, institutionId: row.institutionId, targetType: "exam_sitting", targetId: id, ip: req.ip });
     return { sitting: u };

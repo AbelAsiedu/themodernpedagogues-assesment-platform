@@ -1,6 +1,6 @@
 # Implementation roadmap and status
 
-Status as of 2026-11-10 (Phases 1, 3, 4 and 5 built). Mirrors `apps/web/src/lib/roadmap.ts` (shown in the app). "Live" means built, connected to the
+Status as of 2026-11-10 (Phases 1, 3, 4, 5 and 6 built). Mirrors `apps/web/src/lib/roadmap.ts` (shown in the app). "Live" means built, connected to the
 API and tested.
 
 | Phase | Scope | Status |
@@ -16,7 +16,8 @@ API and tested.
 | 4 | Per-student reports/exports, joining without an account (guest), teacher-paced "next question" mode | Not started |
 | 5 | Exam engine: sectioned exams, scheduling, server-owned deadlines, idempotent ordered saves, receipt, auto-submit, deterministic objective marking, exam room UI, basic control room, results release | **Done, with limits** — 34 tests incl. concurrency and lock-ordering; checked in a real browser (offline recovery, reload restore, auto-submit). **No load test; no capacity claim.** |
 | 5 | Official-style BECE/WASSCE templates, pause/invigilation tools, multi-part questions | Not started (templates need verified specifications from TMP) |
-| 6 | Rubrics, AI-assisted marking, moderation, results, analytics, reports | Not started |
+| 6 | Rubric marking of written answers by a person (per-point marks, server totals, reasons and history, optimistic concurrency), AI mark *suggestions* that are never marks, release guard, analytics, CSV export, marking/analytics screens ([MARKING_AND_GRADING.md](MARKING_AND_GRADING.md)) | **Done, with limits** — 23 tests incl. concurrency and mutation checks; checked in a real browser. AI suggestions tested only against a simulated provider (**live OpenAI call never run**). **No load test.** |
+| 6 | Grade boundaries/grading configurations, batch AI marking, double-marking/moderation workflow, report cards, Excel/PDF exports | Not started |
 | 7 | AI management, platform settings, notifications, remaining admin tools | Not started |
 | 8 | Load, concurrency and security testing, optimisation | Not started |
 | 9 | Production readiness | Not started |

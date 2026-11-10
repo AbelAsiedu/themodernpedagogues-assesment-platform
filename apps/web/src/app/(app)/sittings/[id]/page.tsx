@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { api, describeError, useApi } from "@/lib/api";
+import { ApiError, api, describeError, useApi } from "@/lib/api";
 import { fmtDateTime } from "@/lib/format";
 import { Empty, ErrorNote, Loading, PageHead, Tag } from "@/components/ui";
 
@@ -15,6 +15,11 @@ interface Room {
   serverNow: string; totalQuestions: number; students: Student[];
   counts: { expected: number; notStarted: number; inProgress: number; submitted: number };
 }
+interface Analytics {
+  participation: { expected: number; started: number; submitted: number; fullyMarked: number; awaitingMarking: number };
+  scores: { n: number; min: number; max: number; mean: number; median: number; distribution: { from: number; to: number; count: number }[] } | null;
+  questions: { position: number; stem: string; type: string; marks: number; answered: number; unanswered: number; marked: number; waitingForMarker: number; averageAwarded: number | null; facility: number | null; options?: { id: string; text: string; count: number; correct: boolean }[] }[];
+}
 interface Results { results: { sessionId: string; fullName: string; awarded: number; max: number; pendingItems: number }[] }
 
 const LABEL: Record<Student["status"], string> = { not_started: "not started", in_progress: "working", timed_out: "time up", submitted: "submitted" };
@@ -23,6 +28,8 @@ export default function SittingPage() {
   const { id } = useParams<{ id: string }>();
   const room = useApi<Room>(`/sittings/${id}`);
   const results = useApi<Results>(`/sittings/${id}/results`);
+  const stats = useApi<Analytics>(`/sittings/${id}/analytics`);
+  const [confirmUnmarked, setConfirmUnmarked] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ kind: "good" | "error"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [extending, setExtending] = useState<string | null>(null);
@@ -39,8 +46,12 @@ export default function SittingPage() {
 
   async function act(path: string, body?: unknown, ok?: string) {
     setBusy(true); setMsg(null);
-    try { await api(path, { method: "POST", body }); setMsg(ok ? { kind: "good", text: ok } : null); await room.reload(); await results.reload(); setExtending(null); }
-    catch (e) { setMsg({ kind: "error", text: describeError(e) }); } finally { setBusy(false); }
+    try { await api(path, { method: "POST", body }); setMsg(ok ? { kind: "good", text: ok } : null); await room.reload(); await results.reload(); await stats.reload(); setExtending(null); setConfirmUnmarked(null); }
+    catch (e) {
+      // Releasing with written answers still unmarked needs a deliberate second click.
+      if (e instanceof ApiError && e.status === 409 && path.endsWith("/release-results") && /unmarked/i.test(e.message)) setConfirmUnmarked(e.message);
+      else setMsg({ kind: "error", text: describeError(e) });
+    } finally { setBusy(false); }
   }
   async function extend(sessionId: string, e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -73,10 +84,22 @@ export default function SittingPage() {
         </div>
         <div className="btn-row">
           {closed && !s.resultsReleasedAt && <button className="btn" disabled={busy} onClick={() => void act(`/sittings/${id}/release-results`, undefined, "Results released to students.")}>Release results to students</button>}
+          {r.counts.submitted > 0 && <Link className="btn quiet" href={`/sittings/${id}/marking`}>Mark written answers</Link>}
+          {r.counts.submitted > 0 && <a className="btn quiet" href={`/api/v1/sittings/${id}/results.csv`}>Download results (CSV)</a>}
           {s.resultsReleasedAt && <span className="pill ok">Results released {fmtDateTime(s.resultsReleasedAt)}</span>}
           {r.counts.inProgress + r.counts.submitted === 0 && s.phase !== "cancelled" && !confirmCancel && <button className="btn danger" onClick={() => setConfirmCancel(true)}>Cancel this exam</button>}
           {confirmCancel && <><strong role="alert">Cancel for everyone?</strong><button className="btn danger" disabled={busy} onClick={() => { setConfirmCancel(false); void act(`/sittings/${id}/cancel`, undefined, "Exam cancelled."); }}>Yes, cancel</button><button className="btn quiet" onClick={() => setConfirmCancel(false)}>Keep it</button></>}
         </div>
+        {confirmUnmarked && (
+          <div className="note error" role="alert">
+            <p>{confirmUnmarked}</p>
+            <div className="btn-row">
+              <Link className="btn" href={`/sittings/${id}/marking`}>Go and mark them</Link>
+              <button className="btn danger" disabled={busy} onClick={() => void act(`/sittings/${id}/release-results`, { allowUnmarked: true }, "Results released to students.")}>Release anyway</button>
+              <button className="btn quiet" onClick={() => setConfirmUnmarked(null)}>Not yet</button>
+            </div>
+          </div>
+        )}
         {!closed && <p className="hint">Results can be released after the exam closes. Students see only a receipt until then.</p>}
       </section>
 
@@ -113,13 +136,57 @@ export default function SittingPage() {
 
       <section className="section" aria-labelledby="rs-h">
         <h2 id="rs-h">Marks so far</h2>
-        <p className="hint">Multiple-choice, true/false and short-answer questions are marked automatically after submission. Essays wait for a person to mark them (not built yet), so totals exclude them.</p>
+        <p className="hint">Multiple-choice, true/false and short-answer questions are marked automatically after submission. Written answers wait for a person to mark them (use "Mark written answers"), and totals stay incomplete until they do.</p>
         {results.loading ? <Loading /> : results.error ? <ErrorNote error={results.error} retry={results.reload} /> : !results.data?.results.length ? <Empty title="No submissions yet" /> : (
           <div className="table-wrap"><table>
             <caption className="sr-only">Marks by candidate</caption>
             <thead><tr><th scope="col">Name</th><th scope="col">Marks</th><th scope="col">Waiting for a marker</th></tr></thead>
             <tbody>{results.data.results.map((x) => <tr key={x.sessionId}><td>{x.fullName}</td><td>{x.awarded} / {x.max}</td><td>{x.pendingItems ? `${x.pendingItems} answer${x.pendingItems === 1 ? "" : "s"}` : "—"}</td></tr>)}</tbody>
           </table></div>
+        )}
+      </section>
+
+      <section className="section" aria-labelledby="an-h">
+        <h2 id="an-h">How the exam went</h2>
+        {stats.loading && !stats.data ? <Loading /> : stats.error && !stats.data ? <ErrorNote error={stats.error} retry={stats.reload} /> : stats.data && (
+          <>
+            <div className="stat-row">
+              <div className="stat"><b>{stats.data.participation.submitted}/{stats.data.participation.expected}</b><span>submitted</span></div>
+              <div className="stat"><b>{stats.data.participation.fullyMarked}</b><span>completely marked</span></div>
+              <div className="stat"><b>{stats.data.participation.awaitingMarking}</b><span>waiting for a marker</span></div>
+            </div>
+            {!stats.data.scores ? <p className="hint">Score statistics appear once at least one student's paper is completely marked. Papers still waiting for a marker are left out, never estimated.</p> : (
+              <>
+                <p className="hint">Based on the {stats.data.scores.n} completely marked paper{stats.data.scores.n === 1 ? "" : "s"}, as percentages.</p>
+                <div className="stat-row">
+                  <div className="stat"><b>{stats.data.scores.mean}%</b><span>average</span></div>
+                  <div className="stat"><b>{stats.data.scores.median}%</b><span>median</span></div>
+                  <div className="stat"><b>{stats.data.scores.min}%</b><span>lowest</span></div>
+                  <div className="stat"><b>{stats.data.scores.max}%</b><span>highest</span></div>
+                </div>
+                <div className="bars" role="img" aria-label={`Score spread: ${stats.data.scores.distribution.map((b) => `${b.from} to ${b.to} percent: ${b.count}`).join("; ")}`}>
+                  {stats.data.scores.distribution.map((b) => {
+                    const top = Math.max(...stats.data!.scores!.distribution.map((x) => x.count), 1);
+                    return <div className="bar-row" key={b.from}><span>{b.from}–{b.to}%</span><div className="bar" style={{ width: `${(b.count / top) * 100}%`, opacity: b.count ? 1 : 0.15 }} /><span>{b.count}</span></div>;
+                  })}
+                </div>
+              </>
+            )}
+            <div className="table-wrap"><table>
+              <caption>Each question: how many answered it and how many marks it earned on average</caption>
+              <thead><tr><th scope="col">Q</th><th scope="col">Question</th><th scope="col">Answered</th><th scope="col">Average</th><th scope="col">Share of marks earned</th><th scope="col">Chosen options</th></tr></thead>
+              <tbody>{stats.data.questions.map((x) => (
+                <tr key={x.position}>
+                  <td>{x.position + 1}</td>
+                  <td>{x.stem.length > 80 ? `${x.stem.slice(0, 80)}…` : x.stem}</td>
+                  <td>{x.answered}{x.unanswered ? ` (${x.unanswered} blank)` : ""}</td>
+                  <td>{x.averageAwarded === null ? (x.waitingForMarker ? `${x.waitingForMarker} waiting` : "—") : `${x.averageAwarded} / ${x.marks}`}{x.averageAwarded !== null && x.waitingForMarker ? ` (${x.waitingForMarker} waiting)` : ""}</td>
+                  <td>{x.facility === null ? "—" : `${Math.round(x.facility * 100)}%`}</td>
+                  <td>{x.options ? x.options.map((o) => `${o.id}${o.correct ? "✓" : ""}: ${o.count}`).join("  ") : "—"}</td>
+                </tr>))}</tbody>
+            </table></div>
+            <p className="hint">✓ marks the correct option. A wrong option that many students chose is worth reviewing in class.</p>
+          </>
         )}
       </section>
     </>

@@ -69,7 +69,13 @@ Status codes: 401 not signed in · 403 not allowed · 404 not found (platform st
 | GET `/institutions/:id/sittings` | exams.manage (scope) | with started/submitted counts |
 | GET `/sittings/:id` | exams.manage (its institution) | control room: per-candidate status, answered, deadline |
 | POST `/sittings/:id/cancel` | exams.manage | only before anyone has started |
-| GET `/sittings/:id/results` · POST `/sittings/:id/release-results` | exams.manage | marks exclude unmarked essays; release only after close |
+| GET `/sittings/:id/results` · POST `/sittings/:id/release-results` | exams.manage | results show unmarked written answers as waiting; release only after close; with unmarked written answers it returns 409 unless the body has `{allowUnmarked:true}` |
+| GET `/sittings/:id/marking` | exams.manage (its school; others 403, platform staff 404) | every submitted, non-blank written answer with its frozen rubric, mark, latest AI suggestion, counts, `ai.configured` |
+| PUT `/exam-sessions/:id/marks/:position` | exams.manage | `{criteria:number[], comment|null, basedOn:number|null, reason?, proposalId?}`; 400 on shape/limits or missing reason when changing; 409 if `basedOn` is stale or the attempt isn't submitted; returns `{awarded, changed}`; audited `mark.set` / `mark.adjust` |
+| GET `/exam-sessions/:id/marks/:position/history` | exams.manage | who, when, previous → new, reason, whether it started from an AI suggestion |
+| POST `/exam-sessions/:id/marks/:position/ai-proposal` | exams.manage + ai.generate | stores a suggestion (never a mark); 503 no AI, 409 already marked, 429 quota, 502/504 provider; audited `mark.ai_proposal`; rate limited |
+| GET `/sittings/:id/analytics` | exams.manage | participation, score statistics over completely marked papers, per-question stats |
+| GET `/sittings/:id/results.csv` | exams.manage | CSV download (formula-safe), audited `sitting.export_results` |
 | POST `/exam-sessions/:id/extend` | exams.manage (its institution) | `{minutes 1–120, reason}`, audited; refused once the attempt has ended |
 | GET `/my/exams` | signed-in student | only sittings for their school/class |
 | POST `/sittings/:id/start` | exams.take (student of that school/class) | idempotent; 409 `exam_not_open` / `exam_closed` / `exam_cancelled`; everyone else 404 |

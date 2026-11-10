@@ -3,16 +3,16 @@
 AI-powered assessment and examination platform for The Modern Pedagogues (TMP).
 
 > **Status: Phases 1, 3, 3b, 4 and 5.** Accounts, permissions, schools, classes, the audit log, the **question bank**, the
-> **AI Question Studio**, **quizzes with join codes and a live leaderboard**, **file import** (Excel, CSV, Word, PowerPoint, PDF, text, pictures via OCR → questions or a quiz) and a **timed exam engine** (sectioned exams, server-owned deadlines, saved answers, auto-submit, objective marking) work and are tested (213 tests). The AI Studio has
-> been tested against a simulated provider only; the live OpenAI call has not been run yet. Neither the leaderboard nor the exam engine has been
-> load-tested, so no capacity is claimed. Essay marking (manual or AI), official-style BECE/WASSCE templates and results analytics are **not built yet**; essays are saved but unmarked. See [IMPLEMENTATION_ROADMAP.md](docs/IMPLEMENTATION_ROADMAP.md) and
+> **AI Question Studio**, **quizzes with join codes and a live leaderboard**, **file import** (Excel, CSV, Word, PowerPoint, PDF, text, pictures via OCR → questions or a quiz), a **timed exam engine** (sectioned exams, server-owned deadlines, saved answers, auto-submit, objective marking) and **essay marking with analytics and CSV export** (rubric marks, reasons and history, optional AI *suggestions* that never count as marks) work and are tested (236 tests). The AI Studio has
+> been tested against a simulated provider only; the live OpenAI call has not been run yet. AI mark suggestions are likewise untested against the real service. Neither the leaderboard nor the exam engine has been
+> load-tested, so no capacity is claimed. Grade boundaries, batch AI marking, double marking, report cards and official-style BECE/WASSCE templates are **not built yet**. See [IMPLEMENTATION_ROADMAP.md](docs/IMPLEMENTATION_ROADMAP.md) and
 > [KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md). Nothing is deployed.
 
 ## Layout
 
 ```
 apps/api         Fastify + TypeScript API, Drizzle ORM, PostgreSQL migrations, tests
-apps/web         Next.js web app (sign-in, role-aware shell, schools, users, audit log, question bank, AI Studio, quizzes, live host screen, join and play, exams, exam room, roadmap)
+apps/web         Next.js web app (sign-in, role-aware shell, schools, users, audit log, question bank, AI Studio, quizzes, live host screen, join and play, exams, exam room, marking, analytics, roadmap)
 packages/shared  Roles, permissions and validation schemas shared by both apps
 docs/            Architecture, schema, API, security, deployment, testing
 ```

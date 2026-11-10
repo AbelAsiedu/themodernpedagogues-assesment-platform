@@ -40,7 +40,7 @@ A submit pressed after the deadline is recorded as `auto`; the page's own "time 
 server's clock agrees (within 2 s).
 
 ## Marking and results
-- mcq, true/false and short answer are marked deterministically (same rules as quizzes). **Essays get no mark** until a person marks them (Phase 6), so totals exclude them and the result says how many answers are waiting.
+- mcq, true/false and short answer are marked deterministically (same rules as quizzes). **Essays get no automatic mark.** A person marks them against the frozen rubric ([MARKING_AND_GRADING.md](MARKING_AND_GRADING.md)); until then totals exclude them and the result says how many answers are waiting. Releasing results with unmarked written answers needs an explicit confirmation.
 - `answer_any n`: of the answered items, the best `n` count (candidates are told this up front). Every item in such a section must carry equal marks. If an unmarked essay could change the choice, that section reports *pending* rather than guessing.
 - **Formal-exam isolation:** results are hidden from candidates (they see only their receipt) until a teacher releases them, and release is only allowed after the exam closes. Released results show marks per section and item, **never the answer key or explanations.**
 
@@ -48,4 +48,4 @@ server's clock agrees (within 2 s).
 Per-candidate option shuffling, one attempt per candidate, server-side window and class checks, non-disclosing 404s, audit records for create/schedule/start/submit/auto-submit/extend/release. There is **no** proctoring, tab-switch detection or cheat-proof claim.
 
 ## NOT built
-Official-style BECE/WASSCE templates (need verified specs) · pause/resume, invigilator notes, suspicious-activity reports · multi-part sub-questions `(a)(ii)` and "one from each group" rules · per-candidate question shuffling within sections · manual/AI marking of essays, moderation, rubrics (Phase 6) · results analytics and exports · accommodation profiles (only ad-hoc extra time) · offline-first/service-worker mode (answers survive a refresh and short outages via local storage only) · load tests (**no capacity figure exists**).
+Official-style BECE/WASSCE templates (need verified specs) · pause/resume, invigilator notes, suspicious-activity reports · multi-part sub-questions `(a)(ii)` and "one from each group" rules · per-candidate question shuffling within sections · moderation/double-marking, grade boundaries · accommodation profiles (only ad-hoc extra time) · offline-first/service-worker mode (answers survive a refresh and short outages via local storage only) · load tests (**no capacity figure exists**).

@@ -52,7 +52,9 @@ erDiagram
 | `exam_responses` | current answer per item with `seq` |
 | `exam_response_versions` | every accepted change (insert-only by convention; **no DB trigger enforces this**) |
 | `exam_submissions` | PK = session, so one submission per attempt; receipt (unique) and SHA-256 of final answers |
-| `exam_marks` | per-item marks; only `auto` marks exist today |
+| `exam_marks` | per-item marks; `auto` for objective questions, `manual` for essays (with `marked_by`, per-point `criteria` jsonb, `comment`) |
+| `exam_mark_events` | append-only history of manual marks (actor, previous/new mark, reason, optional AI suggestion id); a trigger refuses UPDATE (migration 0006) |
+| `ai_mark_proposals` | AI suggestions, kept apart from marks: per-point proposals, total, reasoning, confidence, answer hash, `pending`/`used`; never read by results (migration 0006) |
 
 ## File uploads (migration 0005)
 - `uploads` — id, institution_id, uploaded_by, filename (display only), kind (CHECK xlsx/docx/pptx/pdf/csv/txt/image), size_bytes, sha256, `sections` jsonb (extracted text), char_count, `question_table` jsonb (parsed rows or null), warnings jsonb, rights_confirmed_at, created_at. Unique `(institution_id, sha256)`. The original file is **not** stored.
